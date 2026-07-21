@@ -1,0 +1,33 @@
+# Claude Code tooling (machine-specific)
+.claude/
+
+# Vivado / Vitis generisani projekat (regenerise se iz src/vhdl/script/*.tcl)
+src/vhdl/result/
+
+# Vivado / XSim generisani fajlovi (bilo gde)
+*.jou
+*.log
+*.backup.jou
+*.backup.log
+.Xil/
+xsim.dir/
+*.wdb
+*.wcfg
+*.pb
+*.rpx
+*.str
+webtalk*
+usage_statistics*
+vivado_pid*
+
+# Zip arhive izvora (drzimo raspakovano)
+src/vhdl.zip
+
+# OS junk
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Obsidian per-user UI stanje
+PSDS Vault/.obsidian/workspace.json
+PSDS Vault/.obsidian/workspace-mobile.json
