@@ -113,3 +113,41 @@ Sekvencijalni delioci ne menjaju numerički rezultat (egzaktna celobrojna podela
 - [x] Funkcionalna verifikacija: bit-tačno (golden 4×4 + real 90×90)
 
 **Korak 5 završen 2026-07-21.** Sledeće: Korak 6 (AXI omotač / IP pakovanje).
+
+## Re-verifikacija 2026-07-22
+
+Sve brojke iz ovog dokumenta **nezavisno ponovljene** pre nego što su ušle u
+zvaničnu PDF dokumentaciju za profesora. Poklapaju se u potpunosti:
+
+| Provera | Rezultat |
+|---|---|
+| `ncc_core_tb` (golden 4×4) | 9/9 tačno |
+| `ncc_core_real_tb` | `0x80000000 @ (u=32, v=14)`, latencija **2.451.212** |
+| `synth_design` + `report_utilization` | 1526 LUT / 554 FF / 9 DSP / 9 RAMB36, **LUT-as-Memory 0** |
+| `report_timing_summary` (sa `create_clock`) | WNS **+1.179**, WHS **+0.127**, 0 od 1445 tačaka krši |
+| `report_timing` | `sum_num_reg[16]` → `div_ncc/work_reg[78]`, 8.670 ns, 12 nivoa logike |
+
+**Dodato u PDF (nije bilo ovde):**
+
+- **Model latencije:** `T = 2·img_w·img_h + 2·N + res_w·res_h·(N + 110)`,
+  `N = tmp_w·tmp_h`. Predviđa 2.449.729 naspram izmerenih 2.451.212 →
+  **odstupanje 0.06%**, pa je model upotrebljiv za ekstrapolaciju.
+- **Normalizovano poređenje sa ESL/HLS referencom.** Sirovi brojevi NISU
+  uporedivi (ESL meren na 30×30 / mapa 61×61, naš na 25×15 / mapa 66×76).
+  Zajednička mera je takt po piksel-operaciji (`res_w·res_h·tmp_w·tmp_h`):
+
+  | | ESL / Vitis HLS | Ovaj RT model |
+  |---|---|---|
+  | piksel-operacija | 3.348.900 | 1.881.000 |
+  | taktova po piksel-operaciji | 3.09 | **1.30** (2.37× povoljnije) |
+  | predviđeno za 90×90/30×30 | 10.360.183 (103.6 ms) | **3.776.229 (37.8 ms)** — 2.74× brže |
+  | LUT / DSP / FF | 5269 / 16 / 3455 | 1526 / 9 / 554 |
+  | blok-memorija | 4× BRAM_18K (72 kb) | 9× RAMB36 (324 kb) — **4.5× više** |
+
+- **Poznata rezerva (jedina stavka gde smo lošiji):** `sat_t` je 32-bitna, a
+  max suma je 90·90·255 = 2.065.500 → staje u **21 bit**. Suženje bi spustilo
+  potreban kapacitet sa 265 na 174 kb, tj. na ~6 blokova. Namerno uključeno u
+  dokumentaciju za profesora umesto da se prećuti.
+
+**Zvanična dokumentacija:** `PSDS_dokumentacija_y25-g10_Korak2-5.pdf` (poglavlja
+7-8 pokrivaju ovaj korak).

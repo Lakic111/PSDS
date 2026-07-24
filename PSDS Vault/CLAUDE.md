@@ -67,7 +67,16 @@ PSDS Vault/
 ## Moji trenutni projekti i pregledi
 
 ### NCC_Akcelerator — `Projects/NCC_Akcelerator/`
-**Status:** SystemC/TLM model sistema gotov i proveren (šahovski NCC template-matching
-akcelerator, coarse-to-fine, dva paralelna NCC bloka). Predmet implementacije na PSDS
-predmetu — **Korak 1 završen** (HLS C++ kernel u `src/hls/`, TDD-testiran, bit-tačan),
-sledeće **Korak 2** (dokumentacija).
+**Status (2026-07-22): Koraci 1-5 ZAVRŠENI** — svih 50 bodova za prolaz pokriveno.
+Šahovski NCC template-matching akcelerator (coarse-to-fine, dva paralelna NCC bloka);
+SystemC/TLM ESL model je referenca, a RTL se piše **ručno u VHDL-u** (`src/vhdl/`),
+ne kroz HLS.
+
+- C model (Korak 1): `src/hls/`, TDD, 32/32 figure tačno
+- RTL (Korak 3): `ncc_core.vhd`, 21 stanje, sekvencijalni delioci + protočna petlja
+- Verifikacija (Korak 4): golden 4×4 + realni 90×90, bit-tačno
+- Sinteza (Korak 5): 1526 LUT (8.7%), 9 DSP, 9 BRAM, WNS +1.179 ns @ 100 MHz,
+  latencija 2.451.212 taktova
+- Dokumentacija za profesora: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf`
+
+Sledeće: **Korak 6** (AXI-Lite + AXI master omotač, pakovanje u IP).

@@ -3,6 +3,11 @@
 Izvor: `06 Prilozi/Bodovanje projekta.pdf`. Koraci se **moraju** raditi redom.
 Za prolaz treba 50 bodova (koraci 1-5). Koraci 6-10 nose dodatnih 50.
 
+> **STANJE 2026-07-24: Koraci 1-6 ZAVRŠENI** (60 bodova).
+> Sledeće je **Korak 7** (integracija u block design).
+> Zvanična dokumentacija za Korake 2 i 5 predata u obliku PDF-a:
+> `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf`.
+
 > **⚠️ ZAOKRET 2026-07-20 (poništava belešku od 2026-07-14 ispod):** Korak 3 ide kroz
 > **ručni VHDL**, NE Vivado HLS. Pravilnik (`06 Prilozi/Bodovanje projekta.pdf`,
 > pročitan direktno) je tool-agnostic ("modelovanje u nekom od HDL jezika na RT
@@ -118,7 +123,11 @@ dijagram, Mermaid flowchart, 4 odvojene memorije, otvoreno pitanje resource
 sharing za množače — ostavljeno za odluku u Koraku 3 VHDL implementaciji).
 Rađeno po metodologiji iz `01 Razvoj/Vezbe/(C) Vezba 3-5 - RT Modeling.md`.
 
-**Status:** nije započeto.
+**Revizija 2026-07-22:** taj markdown opisuje PRVOBITNI dizajn (9 stanja) i sad je
+istorijski zapis. Merodavna verzija Koraka 2 je PDF:
+`02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf`, poglavlja 2-6, gde ASMD
+i datapath odgovaraju stvarnom `ncc_core.vhd` (21 stanje), uz odeljak 5.7
+"Evolucija dizajna" koji objašnjava razliku.
 
 ## Korak 3 — RTL model (RT nivo, ručni VHDL)
 
@@ -127,6 +136,8 @@ po metodologiji iz `Vezbe/(C) Vezba 3-5 - RT Modeling.md` (dvoprocesni stil:
 1 proces registri, 1 proces kombinaciona logika sa default assignments).
 Direktan izvor: ASMD dijagram + datapath/registri iz
 `02 Dokumentacija/(C) Korak 2 - Opis algoritma, ASMD, datapath-controlpath.md`.
+
+> **Opis ispod (v1) je istorijski.** Finalno stanje je na kraju ovog odeljka.
 
 Fajlovi (`src/vhdl/`): `ncc_pkg.vhd` (tipovi/konstante), `ncc_core.vhd` — **pravi
 dvoprocesni stil** (Vezba 3-5 preporuka, videti ispravku 2026-07-20 ispod): Proces 1
@@ -230,11 +241,22 @@ Project Summary-ja) je NEVEZANO za ovo — utiče samo na fajlove koje Vivado sa
 generiše (npr. block design wrapper), ne primorava naše ručno pisane `.vhd`
 fajlove da budu Verilog.
 
-> **⚠️ NAPOMENA ZA SLEDEĆU SESIJU:** korisnik je eksplicitno rekao da ništa od
-> ovoga nije finalno — VHDL kod, testbench, pa i sam pristup interfejsu će se
-> verovatno još menjati. Ne tretirati Korak 3 kao "zapečaćen", proveriti ovaj
-> fajl i `src/vhdl/ncc_core.vhd` na početku sledeće sesije da se vidi šta je
-> u međuvremenu izmenjeno pre nego što se nastavi.
+**Ispravka #4 2026-07-21 (v_final — sekvencijalni delioci + protočna petlja):**
+posle sinteze iz Ispravke #3 dizajn je stao na ploču ali NIJE zatvarao timing —
+kombinaciona deljenja (`template_mean`, `f_bar`, `NCC²`) su davala WNS oko
+**−46 ns** pri periodu 10 ns. Uvedena su dva sekvencijalna (restoring) delioca
+(`seq_divider`, u istom fajlu): `div_mean` (W=18, deljen za `template_mean` i
+`f_bar`) i `div_ncc` (W=83). Istovremeno je unutrašnja MAC petlja
+**pipeline-ovana** (`S_L_YX_FILL/RUN/DRAIN`): adresa piksela N+1 se izdaje u
+istom taktu u kome se akumulira podatak piksela N → **1 takt/piksel** umesto 2.
+FSM narastao na **21 stanje**. Rezultat: WNS **+1.179 ns** (prolazi), LUT pao sa
+6383 na **1526**, BRAM sa 16 na **9**. Golden test nepromenjen.
+
+**FINALNO STANJE KORAKA 3 (2026-07-21):** `ncc_pkg.vhd` + `ncc_core.vhd`
+(self-contained: `seq_divider` + `ncc_core`), 21 stanje, dvoprocesni stil +
+izolovan `sat_ram_proc`. Merodavan opis dizajna je PDF dokumentacija
+(`02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf`, poglavlja 2-6) —
+markdown `(C) Korak 2 ...md` opisuje PRVOBITNI dizajn i zadržan je kao istorija.
 
 ## Korak 4 — Simulacija/verifikacija RTL-a
 
@@ -247,13 +269,32 @@ maksimum 2³¹) i da se svaka vrednost može proveriti ručno. Prave šablone/ta
 (`board2.txt` + 12 `*template.txt`) smo koristili SAMO u C testu (Korak 1,
 `test_real_data.cpp`, 32/32 tačno) — u VHDL-u to još nije urađeno.
 
-**Osnovni nivo (isti slučaj kao Korak 3) već
-prolazi** — videti Korak 3 iznad. Preostalo za pun Korak 4: proširiti testbench
-na pun opseg 90×90/30×30 (kao `test_full_size_90x30` u Koraku 1) i, ako ima
-vremena, na prave podatke (`board2.txt` + šabloni) čitane kroz VHDL `textio`
-(unakrsna provera protiv C kernela).
+**Proširenje na prave podatke (2026-07-21):** napisan
+`src/vhdl/tb/ncc_core_real_tb.vhd` — čita realni **90×90 segment** (gornje-levo
+polje a8 iz `board2.txt`) i **crni top 25×15** (`Crnitoptemplate.txt`) kroz VHDL
+`textio` iz `tb/seg90.txt` i `tb/crnitop.txt` (jedan piksel po liniji, row-major,
+izvučeno iz `src/hls/data/data/`). Testbench modeluje 3 sinhrone spoljne memorije
+(1-takt kašnjenje), broji `busy` takte (latencija) i pretražuje mapu rezultata
+66×76 tražeći maksimum.
 
-**Status:** osnovni testbench gotov (deo Koraka 3), proširenje nije započeto.
+**Rezultat:** peak **0x80000000 @ (u=32, v=14)** — bit-identično C kernelu iz
+Koraka 1, iznad praga 0.5625 (`0x48000000`), i položaj odgovara zvaničnom FEN-u
+(polje a8 = crni top `r`). Latencija: **2.451.212 taktova**.
+
+**Status: ZAVRŠENO (2026-07-21).** Oba testbencha prolaze:
+
+| Test | Podaci | Rezultat |
+|---|---|---|
+| `ncc_core_tb` | sintetički 4×4 / 2×2 | 9/9 tačaka bit-tačno (uklj. 0 i 0x80000000) |
+| `ncc_core_real_tb` | realni 90×90 + crni top 25×15 | peak 0x80000000 @ (32,14) ✓ |
+
+Komande (re-verifikovano 2026-07-22):
+```
+export PATH="/c/AMDDesignTools/2025.2/Vivado/bin:$PATH"
+xvhdl -2008 ncc_pkg.vhd ncc_core.vhd tb/ncc_core_tb.vhd tb/ncc_core_real_tb.vhd
+xelab -debug typical ncc_core_tb      -s tb_small && xsim tb_small -runall
+xelab -debug typical ncc_core_real_tb -s tb_real  && xsim tb_real  -runall
+```
 
 ## Korak 5 — Analiza posle sinteze/implementacije (uslov za prolaz, granica 50 bodova)
 
@@ -265,11 +306,35 @@ vremena, na prave podatke (`board2.txt` + šabloni) čitane kroz VHDL `textio`
 **Referentne brojke (POTVRĐENE, iz ESL dokumentacije — ne procena):** period takta
 7.3ns procenjen (cilj 10ns/100MHz), latencija 10.360.183 ciklusa = 0.1036s po pozivu,
 resursi po instanci NCC-a: **4× BRAM_18K, 16× DSP48E, 3455 FF, 5269 LUT** (na
-xc7z010-clg225-2). Naš rezultat treba da bude blizu ovih brojki (± razumna
-varijacija zbog verzije alata/pragmi). Videti
-`00 Pregled/(C) ESL dokumentacija - izvod.md` za pune tabele.
+xc7z010-clg225-2). Videti `00 Pregled/(C) ESL dokumentacija - izvod.md` za pune
+tabele. **Napomena:** te brojke su iz DRUGOG toka alata (Vitis HLS) i iz ranije faze
+projekta — koriste se kao referenca za poređenje, ne kao cilj koji treba pogoditi.
 
-**Status:** nije započeto.
+**Status: ZAVRŠENO (2026-07-21, brojke nezavisno re-verifikovane 2026-07-22).**
+Puna analiza: `02 Dokumentacija/(C) Korak 5 - Analiza sinteze.md` i poglavlja 7-8
+PDF dokumentacije.
+
+- **5a Resursi:** 1526 LUT (8.67%), 554 FF (1.57%), 9 DSP48E1 (11.25%),
+  9 RAMB36 (15.00%), **LUT-as-Memory = 0**
+- **5b Kritična putanja:** WNS **+1.179 ns** @ 10 ns (0 od 1445 tačaka krši),
+  WHS +0.127 ns, putanja `sum_num_reg[16]` → `div_ncc/work_reg[78]`,
+  8.670 ns (logika 6.860 / rutiranje 1.810), 12 nivoa logike → **Fmax ~113 MHz**
+- **5c Latencija/throughput:** 2.451.212 taktova = **24.51 ms** @ 100 MHz na
+  90×90/25×15 (5016 pozicija) → ~204.600 pozicija/s, **1.30 takta po
+  piksel-operaciji** (ESL/HLS referenca: 3.09)
+- **5d Dokumentacija:** PDF za profesora, poglavlja 7-8
+
+**Model latencije (izveden iz merenja, odstupanje 0.06%):**
+`T = 2·img_w·img_h + 2·N + res_w·res_h·(N + 110)`, `N = tmp_w·tmp_h`.
+Ekstrapolacija na 90×90/30×30 = **3.776.229 taktova (37.8 ms)** naspram ESL/HLS
+10.360.183 (103.6 ms) → **2.74× brže**. Ovo je gotov ulaz za korak 8e.
+
+**Metodološka zamka:** bez `create_clock -period 10.000` izveštaj
+`report_timing_summary` javlja `WNS = inf` (dizajn neograničen). Clock constraint
+je OBAVEZAN da bi brojke imale značenje.
+
+**Poznata rezerva:** `sat_t` je 32-bitna, dovoljna je 21 bita (max 90·90·255 =
+2.065.500) → BRAM bi pao sa 9 na ~6 blokova. Dokumentovano, nije urađeno.
 
 ---
 --- Sve iznad je uslov za prolazak (50 bodova) ---
@@ -278,10 +343,30 @@ varijacija zbog verzije alata/pragmi). Videti
 
 **Realizacija: ručni Package IP wizard** (zaokret 2026-07-20 — Korak 3 ide kroz
 VHDL, ne HLS, pa "Export RTL → IP Catalog" opcija ne važi) — po uputstvima iz
-`Vezbe/(C) Vezba 08-09 - IP Packaging.md`, pakuje se `ncc_core.vhd` (+ datapath/
-controlpath) iz Koraka 3.
+`Vezbe/(C) Vezba 08-09 - IP Packaging.md`, pakuje se `ncc_core.vhd` (+ `ncc_pkg.vhd`)
+iz Koraka 3.
 
-**Status:** nije započeto.
+**Status: ZAVRŠENO (2026-07-24).** IP `ncc_accel` = AXI-Lite slave (S00, kontrola)
++ AXI-Full slave (S01, interne memorije slika/šablon/rezultat) + `ncc_core`
+(nepromenjen). **Slave + interne memorije** (obrazac matrix-multiply iz Vežbe
+08-09 — vežba master NE pokriva). Integracioni TB `src/vhdl/tb/ncc_accel_tb.vhd`:
+zlatni peak `0x80000000 @ (32,14)` kroz AXI, bit-identično Koraku 4. Spakovano u
+katalog + `.zip`, S01 opseg 128 KB. Detalji: `(C) Korak 6 - Dizajn AXI omotača
+(IP pakovanje).md` i `(C) Korak 6 - Plan implementacije (AXI IP).md`.
+
+Šta je urađeno (istorijski, prvobitni plan bio je):
+1. **AXI-Lite slave** omotač za komandne/statusne registre po mapi iz Tabele 3
+   dokumentacije (`REG_IMG_W/H`, `REG_TMP_W/H`, `REG_IMG_ADDR`, `REG_TMP_ADDR`,
+   `REG_CTRL`, `REG_STATUS`) — trenutno su to obični ulazi `img_w/h`, `tmp_w/h`
+   i `start`/`busy`/`done` na portu `ncc_core`.
+2. **AXI master** (ili AXI-Stream/BRAM port, odlučiti) za `img_addr_o`/`img_data_i`,
+   `templ_addr_o`/`templ_data_i` i `result_addr_o`/`result_data_o`/`result_wr_o`.
+   Trenutni interfejs je namerno prost adresa+podatak sa 1-taktnim kašnjenjem —
+   to je tačno ponašanje BRAM porta, pa mapiranje treba da bude direktno.
+3. Package IP wizard → IP Catalog, pa provera da se IP uredno instancira.
+
+**Ne dirati `ncc_core` iznutra** — verifikovan je i sintetizovan (Koraci 4-5);
+omotač ide okolo. Ako se `ncc_core` ipak menja, oba testbencha moraju ponovo proći.
 
 ## Korak 7 — Integracija u block design [5 bodova]
 

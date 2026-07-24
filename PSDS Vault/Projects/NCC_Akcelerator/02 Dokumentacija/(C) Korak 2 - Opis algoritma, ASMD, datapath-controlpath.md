@@ -1,5 +1,25 @@
 # Korak 2 — Dokumentacija (2a-2e)
 
+> ## ⚠️ ZASTARELO — ISTORIJSKI ZAPIS
+>
+> Ovaj dokument je pisan **2026-07-20**, pre nego što je RTL napisan, i opisuje
+> **prvobitni** dizajn: ASMD sa **9 stanja**, kombinaciona deljenja, `img_dirty`
+> optimizacija, kombinaciona čitanja memorija.
+>
+> **Stvarno implementirani `src/vhdl/ncc_core.vhd` ima 21 stanje**, dva
+> sekvencijalna delioca (`seq_divider`, W=18 i W=83), protočnu unutrašnju petlju
+> (`S_L_YX_FILL/RUN/DRAIN`), petostepeno sinhrono čitanje SAT (`S_L_U_A..E`) i
+> **nema** `img_dirty`. Razlozi svih odstupanja (BRAM inferencija, timing) su
+> konkretni i merljivi.
+>
+> **Merodavna verzija Koraka 2 je PDF dokumentacija:**
+> `PSDS_dokumentacija_y25-g10_Korak2-5.pdf`, poglavlja 2-6 (opis algoritma,
+> uklanjanje petlji, interfejs, ASMD, datapath/controlpath), sa odeljkom 5.7
+> "Evolucija dizajna" koji objašnjava razliku u odnosu na ovaj dokument.
+>
+> Ovaj fajl se čuva jer 2b (uklanjanje petlji, `if`-`goto` forme) i dalje važi
+> doslovno, i jer pokazuje tok projektovanja od algoritma ka RTL-u.
+
 Osnova: `src/hls/ncc_kernel.cpp`/`.hpp` (Korak 1, TDD-testiran, 32/32 tačno na
 pravim podacima — videti `01 Razvoj/(C) Plan implementacije (10 koraka).md`).
 Metodologija: `01 Razvoj/Vezbe/(C) Vezba 3-5 - RT Modeling.md` (RT/ASMD postupak,
