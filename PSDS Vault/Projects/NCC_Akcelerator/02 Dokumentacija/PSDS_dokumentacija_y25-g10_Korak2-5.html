@@ -1960,6 +1960,226 @@ ni u jednom od dva slučaja, jer su memorije jednostruko baferovane i jezgro ih 
 računa. DMA je zato <i>brži prenos</i>, a ne <i>skrivena latencija</i>. Dvostruko
 baferovanje memorije slike bilo bi izmena u samom bloku i pravac za dalji rad.</p>
 
+<!-- ======================= 10. ANALIZA SISTEMA ======================= -->
+<h1>10. Analiza integrisanog sistema</h1>
+
+<h2>10.1. Metod</h2>
+
+<p>Ceo sistem se gradi i implementira <b>jednom skriptom, u komandnom režimu</b>, bez
+ručnih koraka u grafičkom okruženju. Skripta sastavlja sistem, pokreće sintezu i
+implementaciju do faze fizičke optimizacije posle rutiranja, i ispisuje izveštaje. Brojke
+u ovom poglavlju su sve <b>post-route</b>.</p>
+
+<p>U tok su ugrađene dve <b>kapije</b> koje ga zaustavljaju na tihim otkazima na koje smo
+već naleteli. Prva proverava da IP nije sintetisan kao prazna kutija: ako se u paketu
+pogreši oznaka jezika, alat prestane da prepoznaje izvorne fajlove i napravi prazan blok
+<b>bez ijedne greške</b> &mdash; sinteza tada prođe u celini, a padne tek implementacija.
+Druga kapija poredi dve kopije izvora jezgra (jedna služi simulaciji, druga je unutar
+IP-a) i pada ako se raziđu, jer bi se inače simulirao jedan a sintetisao drugi kod.</p>
+
+<p class="noind"><b>Fizička optimizacija nije opcija nego deo ugovora.</b> Merenjem je
+utvrđeno da bez nje sistem <b>ne zatvara</b> vremenska ograničenja: standardna strategija
+daje rezervu od &minus;0,714&nbsp;ns, a strategija sa optimizacijom posle rutiranja
+&minus;0,233&nbsp;ns nad <i>istim</i> RTL-om. Skripta je zato izričito uključuje.</p>
+
+<h2>10.2. Utrošeni resursi</h2>
+
+<table>
+  <caption><b>Tabela 19.</b> Resursi celog sistema (post-route, xc7z010clg400-1)</caption>
+  <thead>
+    <tr><th>Resurs</th><th class="n">Utrošeno</th><th class="n">Raspoloživo</th><th class="n">Iskorišćenost</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Slice LUT</td><td class="n">6.261</td><td class="n">17.600</td><td class="n"><b>35,57 %</b></td></tr>
+    <tr><td>Slice registri (FF)</td><td class="n">5.024</td><td class="n">35.200</td><td class="n">14,27 %</td></tr>
+    <tr><td>Block RAM (ukupno)</td><td class="n">39</td><td class="n">60</td><td class="n"><b>65,00 %</b></td></tr>
+    <tr><td>DSP48E1</td><td class="n">18</td><td class="n">80</td><td class="n">22,50 %</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption><b>Tabela 20.</b> Raspodela resursa po blokovima</caption>
+  <thead>
+    <tr><th>Blok</th><th class="n">LUT</th><th class="n">FF</th><th class="n">RAMB36</th><th class="n">DSP</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="mono">ncc0</span> (ceo IP)</td><td class="n">1.910</td><td class="n">1.240</td><td class="n">19</td><td class="n">9</td></tr>
+    <tr><td><span class="mono">ncc1</span> (ceo IP)</td><td class="n">1.910</td><td class="n">1.240</td><td class="n">19</td><td class="n">9</td></tr>
+    <tr><td><span class="mono">axi_interconnect_0</span></td><td class="n">1.616</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+    <tr><td><span class="mono">axi_cdma_0</span></td><td class="n">807</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+  </tbody>
+</table>
+
+<p>Po instanci je <b>1.910 LUT</b>, a golo jezgro troši 1.472 (odeljak 7.2) &mdash; razlika
+od oko 440 LUT su dva AXI kontrolera i memorijski podsistem, dakle cena standardnog
+interfejsa. Interkonekt i DMA zajedno troše 2.423 LUT, oko 14&nbsp;% uređaja.</p>
+
+<p class="noind"><b>Blok-memorija je najveće zauzeće i naša slabost.</b> Sa 65&nbsp;% je
+to jedini resurs bez velike rezerve, i tu smo <b>slabiji od referentnog rešenja</b> iz
+prethodne faze projekta, koje po instanci koristi svega četiri manja bloka. Uzrok je
+poznat i naveden je već u odeljku 7.2: reč integralne slike je 32-bitna, a dovoljno je
+<b>21 bit</b>, jer je najveća moguća suma 90&nbsp;&middot;&nbsp;90&nbsp;&middot;&nbsp;255
+=&nbsp;2.065.500. Sužavanje te reči oslobodilo bi približno tri bloka po instanci, dakle
+oko šest ukupno, i spustilo zauzeće na oko 55&nbsp;%. Nije izvedeno jer memorija nije
+usko grlo ovog dizajna, ali je to prva stvar koju treba uraditi ako se doda treća
+instanca.</p>
+
+<h2>10.3. Vremenska analiza i radni takt</h2>
+
+<table>
+  <caption><b>Tabela 21.</b> Vremenska analiza sistema (post-route + fizička optimizacija)</caption>
+  <thead>
+    <tr><th>Veličina</th><th class="n">Vrednost</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Radni takt</td><td class="n"><b>90,909 MHz</b> (period 11,000 ns)</td></tr>
+    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+0,170 ns</b></td></tr>
+    <tr><td>Najgora rezerva za zadržavanje (WHS)</td><td class="n">+0,025 ns</td></tr>
+    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n"><b>0 od 15.459</b></td></tr>
+    <tr><td>Kritična putanja</td><td class="n"><span class="mono">ncc1/core_inst/y_reg[0]</span> &rarr;<br>
+        <span class="mono">ncc1/ms_inst/img_mem/ADDRBWRADDR[13]</span></td></tr>
+    <tr><td>Provera pravila projektovanja</td><td class="n">bez kritičnih upozorenja</td></tr>
+  </tbody>
+</table>
+
+<p><b>Sistem zatvara vremenska ograničenja na 90,909 MHz</b>, sa pozitivnom rezervom i za
+postavljanje i za zadržavanje, i bez ijedne krajnje tačke koja krši ograničenje.</p>
+
+<p class="noind"><b>Zašto 90,909 a ne 100 MHz.</b> Traženo je 95&nbsp;MHz, a PLL
+procesorskog sistema deli svoju ulaznu frekvenciju celim brojem, pa najbliža ostvariva
+vrednost iznosi 1000/11&nbsp;=&nbsp;90,909&nbsp;MHz. Odstupanje od nominalnih
+100&nbsp;MHz je <b>9,1&nbsp;%</b>, dakle unutar granice od 20&nbsp;% koju zadatak
+dopušta za razliku između sistemskog modela i realizacije.</p>
+
+<p class="noind"><b>Ograničenje je integracija, ne jezgro.</b> Ovo treba reći precizno,
+jer je razlika bitna. Samostalno jezgro <b>zatvara</b> i 100&nbsp;MHz, sa rezervom od
+0,146&nbsp;ns (odeljak 7.3). Ceo sistem na istom ograničenju daje &minus;0,232&nbsp;ns.
+Kritična putanja u sistemu je adresna putanja <i>unutar</i> jezgra &mdash; ista logika
+koja samostalno nije ni blizu kritične &mdash; a postaje vezujuća tek pod pritiskom
+razmeštaja i zagušenja rutiranja u dizajnu koji zauzima trećinu uređaja. Dakle RTL je
+zadovoljavajući; cenu plaća integracija.</p>
+
+<p class="noind"><b>Poluga koja nije iskorišćena.</b> Adresa piksela u unutrašnjoj petlji
+računa se u svakom taktu kao
+(<span class="mono">v</span>&nbsp;+&nbsp;<span class="mono">y</span>)&nbsp;&middot;&nbsp;<span class="mono">img_w</span>
++&nbsp;(<span class="mono">u</span>&nbsp;+&nbsp;<span class="mono">x</span>), dakle kroz
+množač. Mogla bi se računati <b>inkrementalno</b> &mdash; adresa u registru, uz korak
++1 unutar reda i +(<span class="mono">img_w</span>&nbsp;&minus;&nbsp;<span class="mono">tmp_w</span>&nbsp;+&nbsp;1)
+na prelasku reda &mdash; što izbacuje množač iz petlje i ne menja latenciju. Nije
+primenjeno iz dva razloga: dizajn već zadovoljava rubriku, a to bi bio treći zahvat u
+verifikovano jezgro. Uz to dobitak nije zagarantovan, jer je oko 62&nbsp;% te putanje
+rutiranje, a ne logika &mdash; izbacivanje množača skraćuje samo logički deo.</p>
+
+<h2>10.4. Propusnost sistema</h2>
+
+<p>Latencija jednog poziva je izmerena simulacijom i iznosi 2.461.201 takt (odeljak 7.4),
+što pri radnom taktu od 90,909&nbsp;MHz daje <b>27,07&nbsp;ms</b>. Model latencije
+omogućava da se ta brojka preračuna na drugu veličinu segmenta i šablona:</p>
+
+<div class="formula">
+  T = 2 &middot; img_w &middot; img_h + 2 &middot; N + res_w &middot; res_h &middot; (N + 112),
+  &nbsp;&nbsp; N = tmp_w &middot; tmp_h
+</div>
+
+<table>
+  <caption><b>Tabela 22.</b> Propusnost pri radnom taktu od 90,909 MHz</caption>
+  <thead>
+    <tr><th>Veličina zadatka</th><th class="n">Taktova</th><th class="n">Vreme</th><th>Izvor</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>segment 90&times;90, šablon 25&times;15</td><td class="n">2.461.201</td><td class="n"><b>27,07 ms</b></td><td>izmereno simulacijom</td></tr>
+    <tr><td>segment 90&times;90, šablon 30&times;30</td><td class="n">3.783.652</td><td class="n"><b>41,6 ms</b></td><td>iz modela</td></tr>
+  </tbody>
+</table>
+
+<p>Pošto su u sistemu <b>dve</b> instance koje rade paralelno, sistem obrađuje dva polja
+table u istom vremenu u kome bi jedna instanca obradila jedno.</p>
+
+<h2>10.5. Put do zatvaranja vremenskih ograničenja</h2>
+
+<p>Prva verzija integrisanog sistema imala je vremensku rezervu od
+<b>&minus;3,299&nbsp;ns</b>, dakle nije ni blizu zatvarala. Do pozitivne rezerve se došlo
+u četiri koraka, navedena po veličini doprinosa.</p>
+
+<table>
+  <caption><b>Tabela 23.</b> Mere kojima su zatvorena vremenska ograničenja</caption>
+  <thead>
+    <tr><th>Mera</th><th>Gde</th><th class="n">Doprinos</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Protočni stepen u MAC petlji</td><td>RTL jezgra</td><td class="n"><b>+2,43 ns</b></td></tr>
+    <tr><td>Fizička optimizacija posle rutiranja</td><td>tok implementacije</td><td class="n">+0,481 ns</td></tr>
+    <tr><td>Registar pred deliocem</td><td>RTL jezgra</td><td class="n">+0,155 ns</td></tr>
+    <tr><td>Deljena magistrala umesto krosbara</td><td>interkonekt</td>
+        <td class="n">interkonekt sam:<br>8.673 &rarr; 1.616 LUT</td></tr>
+    <tr><td>Sužavanje porta <span class="mono">S_AXI_HP0</span> na 32 bita</td><td>procesorski sistem</td>
+        <td class="n">ceo sistem:<br>9.681 &rarr; 6.261 LUT<br>8.696 &rarr; 5.024 FF</td></tr>
+  </tbody>
+</table>
+
+<p>Dva zapažanja iz ove tabele vrede više od samih brojki.</p>
+
+<p class="noind"><b>Fizička optimizacija donosi više od drugog preseka u RTL-u.</b> Njen
+doprinos od 0,481&nbsp;ns je veći od 0,155&nbsp;ns koje je dao registar pred deliocem &mdash;
+a ne zahteva nikakvu izmenu koda. To je razlog zašto je uključena u skriptu kao obavezan
+korak, a ne kao opcija.</p>
+
+<p class="noind"><b>Dve mere nisu popravile vreme, nego površinu</b> &mdash; i to treba
+razlikovati. Zamena krosbara deljenom magistralom smanjila je sam interkonekt sa 8.673 na
+1.616&nbsp;LUT, a sužavanje porta spustilo je zauzeće celog sistema sa 55,0&nbsp;% na
+35,6&nbsp;% (9.681 &rarr; 6.261&nbsp;LUT), jer je uklonilo šest konvertora širine. Ali
+izmerena vremenska rezerva se pri sužavanju porta pomerila samo sa &minus;0,233 na
+&minus;0,232&nbsp;ns, dakle praktično nimalo.</p>
+
+<p class="noind">Prvobitna pretpostavka da kritična putanja ide kroz te konvertore bila je
+<b>netačna</b>, i vredi reći zašto je nastala: u jednom merenju konvertor se pojavio kao
+najgora putanja, ali samo zato što je na tom ograničenju adresna putanja imala rezervu.
+Uklanjanjem konvertora pokazalo se da je vezujuća putanja sve vreme bila adresna, unutar
+jezgra. Izmena je zadržana zbog površine, ne zbog vremena. Pouka je metodološka: pre
+pripisivanja uzroka treba uporediti putanje na <b>istom</b> ograničenju takta.</p>
+
+<h2>10.6. Poređenje sa referentnim rešenjem</h2>
+
+<p>Sistem se poredi sa rešenjem iz prethodne faze projekta, u kome je isto jezgro dobijeno
+visokonivoskom sintezom iz jezika C. Poređenje ima smisla po resursima i po broju taktova
+na jedinicu posla; ukupno vreme obrade cele table nije direktno uporedivo, o čemu na kraju
+odeljka.</p>
+
+<table>
+  <caption><b>Tabela 24.</b> Poređenje sa rešenjem iz visokonivoske sinteze</caption>
+  <thead>
+    <tr><th>Veličina</th><th class="n">Referentno rešenje</th><th class="n">Ovaj rad</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>LUT po instanci</td><td class="n">5.269</td><td class="n"><b>1.910</b></td></tr>
+    <tr><td>DSP po instanci</td><td class="n">16</td><td class="n"><b>9</b></td></tr>
+    <tr><td>Blok-memorija po instanci</td><td class="n">4 manja bloka</td><td class="n">19 većih &larr; slabije</td></tr>
+    <tr><td>LUT za dve instance</td><td class="n">10.538 (59,9 %)</td><td class="n"><b>ceo sistem</b> 6.261 (35,6 %)</td></tr>
+    <tr><td>Taktova za 90&times;90 / 30&times;30</td><td class="n">10.360.183</td><td class="n"><b>3.783.652</b></td></tr>
+    <tr><td>Taktova po piksel-operaciji</td><td class="n">3,09</td><td class="n"><b>1,13</b></td></tr>
+  </tbody>
+</table>
+
+<p><b>Ceo naš sistem &mdash; dve instance, interkonekt i DMA zajedno &mdash; staje u manje
+LUT-ova nego što referentno rešenje troši samo na svoja dva jezgra.</b> Po broju taktova
+na istom zadatku razlika je <b>2,74&times;</b> u našu korist. Jedina veličina po kojoj smo
+slabiji je blok-memorija, sa poznatim uzrokom (odeljak 10.2).</p>
+
+<p class="noind"><b>Kako čitati brojku „taktova po piksel-operaciji".</b> To je ukupan broj
+taktova podeljen brojem množenja koje algoritam mora izvesti, i služi da se porede
+merenja izvedena na različitim veličinama zadatka. Vrednost <b>nije konstanta</b>: raste
+kako šablon opada, jer se režija od 112 taktova po poziciji prozora amortizuje na manje
+množenja. Na šablonu 30&times;30 iznosi 1,13, a na 25&times;15 čak 1,31. U tabeli je zato
+navedena vrednost na <b>istoj</b> veličini zadatka na kojoj je merena i referenca.</p>
+
+<p class="noind"><b>Zašto se ukupno vreme obrade table ne poredi tabelarno.</b> Sistemski
+model prethodne faze kalibrisan je konstantom koja je izvedena iz izveštaja
+visokonivoske sinteze, dakle iz <i>tuđe</i> implementacije istog algoritma. Pošto naš RTL
+isti posao obavlja 2,74&times; efikasnije po piksel-operaciji, ukupno vreme koje taj model
+predviđa nije uporedivo sa našim bez prethodne rekalibracije te konstante. Poređenje po
+taktovima i po resursima, koje je u tabeli iznad, ne zavisi od te kalibracije i zato je
+navedeno.</p>
+
 <!-- ============================ 11. ZAKLJUČAK ============================ -->
 <h1>11. Zaključak</h1>
 
