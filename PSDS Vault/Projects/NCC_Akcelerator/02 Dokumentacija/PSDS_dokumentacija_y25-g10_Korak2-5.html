@@ -1573,8 +1573,143 @@ vrednosti NCC<sup>2</sup>&nbsp;=&nbsp;1,0, što je daleko iznad praga
 0,5625&nbsp;(<span class="mono">0x48000000</span>), a položaj maksimuma odgovara
 polju koje u zvaničnoj FEN notaciji zaista sadrži crnog topa.</p>
 
-<!-- ============================ 8. ZAKLJUČAK ============================ -->
-<h1>8. Zaključak</h1>
+<!-- ============================ 8. IP JEZGRO ============================ -->
+<h1>8. Pakovanje u IP jezgro</h1>
+
+<h2>8.1. Izbor obrasca: slave sa internim memorijama</h2>
+
+<p>Da bi jezgro postalo upotrebljivo u alatu za integraciju blokova, mora dobiti
+standardni interfejs. Postoje dva uobičajena obrasca. U prvom je akcelerator
+<b>master</b> na magistrali i sam čita i piše po deljenoj memoriji; u drugom je
+<b>slave</b> sa sopstvenim internim memorijama, u koje procesor ili DMA prethodno
+prepišu podatke. Izabran je drugi.</p>
+
+<p>Razlog je praktičan. Master interfejs zahteva sopstvenu mašinu stanja za
+adresiranje, rukovanje sa <span class="mono">arvalid</span>/<span class="mono">rready</span>
+i obradu odgovora, dakle novu, neverifikovanu logiku u bloku koji je do tada bio
+bit-tačan. Slave obrazac ne dira jezgro uopšte: <span class="mono">ncc_core</span> ulazi
+u omotač <b>nepromenjen</b>, sa istim adresno-podatkovnim portovima kojima je i pre
+pristupao memoriji. Verifikacija iz odeljka 7.5 time ostaje na snazi, a to je i
+potvrđeno merenjem &mdash; izlaz kroz AXI je bit-identičan.</p>
+
+<p>Cena te odluke je da segment slike i šablon moraju biti <i>preneseni</i> u interne
+memorije pre svakog poziva, umesto da ih jezgro čita direktno iz deljene memorije. Koliko
+to košta, pokazuje odeljak 9.5: oko 7&nbsp;% ukupnog vremena ako prenos radi procesor,
+oko 1&nbsp;% ako ga radi DMA.</p>
+
+<p class="noind"><b>Odstupanje od sistemskog modela.</b> Sistemski model iz prethodne faze
+projekta pretpostavlja deljenu blok-memoriju na adresi
+<span class="mono">0x4000_0000</span> i registre
+<span class="mono">REG_IMG_ADDR</span>/<span class="mono">REG_TMP_ADDR</span> kojima
+procesor javlja gde se podaci nalaze. U slave obrascu deljene memorije nema, pa ta adresa
+<b>ne postoji</b>, a ta dva registra postaju <b>rezervisana</b> &mdash; zadržana su u mapi
+da adrese ostalih registara ostanu nepromenjene.</p>
+
+<h2>8.2. Dva AXI interfejsa</h2>
+
+<p>Blok izlaže dva odvojena slave interfejsa, jer se saobraćaj prirodno deli na dve
+vrste: nekoliko kratkih pristupa registrima i masovni prenos piksela.</p>
+
+<table>
+  <caption><b>Tabela 14.</b> AXI interfejsi IP bloka <span class="mono">ncc_accel</span></caption>
+  <thead>
+    <tr><th>Interfejs</th><th>Tip</th><th class="c">Širina adrese</th><th class="n">Opseg</th><th>Uloga</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="mono">S00_AXI</td><td>AXI4-Lite</td><td class="c">6 bita</td><td class="n">4 KB</td>
+        <td>kontrolni i statusni registri</td></tr>
+    <tr><td class="mono">S01_AXI</td><td>AXI4-Full</td><td class="c">17 bita</td><td class="n">128 KB</td>
+        <td>interne memorije: slika, šablon, rezultat</td></tr>
+  </tbody>
+</table>
+
+<p>AXI4-Lite je za registre dovoljan: pristupi su pojedinačni i retki. Za memorije je
+uzet pun AXI4, jer on podržava <i>burst</i> prenose &mdash; bez njih bi DMA morao da
+izdaje po jednu transakciju na svaku reč, što bi prenos od 8.100 reči učinilo
+besmisleno skupim.</p>
+
+<p class="noind"><b>Širina adrese S01 nije slobodan parametar.</b> Port
+<span class="mono">mem_addr_o</span> ka memorijskom podsistemu je fiksno 17-bitni, pa je
+17 jedina ispravna vrednost <span class="mono">C_S01_AXI_ADDR_WIDTH</span>. Pošto
+čarobnjak za pakovanje ume da tu vrednost vrati na svoju podrazumevanu, u kodu stoji
+statička tvrdnja koja sintezu <b>zaustavlja</b> ako vrednost nije 17 &mdash; umesto da
+blok tiho dekodira samo prvi kilobajt i preklopi sva tri regiona jedan preko drugog.</p>
+
+<h2>8.3. Regioni unutar memorijskog interfejsa</h2>
+
+<p>Sve tri memorije dele isti AXI interfejs, a razlikuju se po gornja dva bita adrese.
+Dekodovanje je čisto kombinaciono: <span class="mono">region = addr(16:15)</span>,
+<span class="mono">indeks reči = addr(14:2)</span>.</p>
+
+<table>
+  <caption><b>Tabela 15.</b> Regioni unutar <span class="mono">S01_AXI</span>
+  (offset od bazne adrese bloka)</caption>
+  <thead>
+    <tr><th>Region</th><th class="c">addr(16:15)</th><th class="mono">offset</th>
+        <th>Sadržaj</th><th class="c">Organizacija</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Slika</td><td class="c mono">00</td><td class="mono">+0x00000</td>
+        <td>pikseli segmenta</td><td class="c">8 bita &times; 8.192</td></tr>
+    <tr><td>Šablon</td><td class="c mono">01</td><td class="mono">+0x08000</td>
+        <td>pikseli šablona</td><td class="c">8 bita &times; 1.024</td></tr>
+    <tr><td>Rezultat</td><td class="c mono">10</td><td class="mono">+0x10000</td>
+        <td>NCC<sup>2</sup> u formatu Q1.31</td><td class="c">32 bita &times; 8.192</td></tr>
+  </tbody>
+</table>
+
+<p><b>Jedan piksel zauzima celu 32-bitnu reč</b>, iako mu je dovoljan jedan bajt. To je
+namerno: procesor i DMA time pristupaju svim regionima na isti način, bez pakovanja i
+raspakivanja bajtova, a upis se svodi na prostu petlju. Cena je četiri puta veći prenos
+kroz magistralu, ali prenos nije usko grlo (odeljak 9.5). Upis poštuje signale izbora
+bajtova, pa upis sa isključenim najnižim bajt-lane-om ne menja piksel.</p>
+
+<p class="noind">Regioni su poravnati na 32&nbsp;KB, a najduži burst je 1&nbsp;KB, pa
+nijedan burst ne može preći iz jednog regiona u drugi &mdash; pod uslovom da softver ne
+pokrene prenos duži od samog regiona.</p>
+
+<h2>8.4. Kontrolni i statusni registri</h2>
+
+<p>Bazne adrese registara su namerno zadržane identične konstantama iz sistemskog modela,
+tako da softver iz prethodne faze projekta može biti prenesen bez menjanja adresa.</p>
+
+<table>
+  <caption><b>Tabela 16.</b> Registri dostupni preko <span class="mono">S00_AXI</span></caption>
+  <thead>
+    <tr><th class="mono">offset</th><th>Registar</th><th class="c">Pristup</th><th>Značenje</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="mono">0x00</td><td class="mono">IMG_W</td><td class="c">upis/čitanje</td><td>širina segmenta slike</td></tr>
+    <tr><td class="mono">0x04</td><td class="mono">IMG_H</td><td class="c">upis/čitanje</td><td>visina segmenta slike</td></tr>
+    <tr><td class="mono">0x08</td><td class="mono">TMP_W</td><td class="c">upis/čitanje</td><td>širina šablona</td></tr>
+    <tr><td class="mono">0x0C</td><td class="mono">TMP_H</td><td class="c">upis/čitanje</td><td>visina šablona</td></tr>
+    <tr><td class="mono">0x10</td><td class="mono">IMG_ADDR</td><td class="c">&mdash;</td><td><i>rezervisan</i> (videti 8.1)</td></tr>
+    <tr><td class="mono">0x14</td><td class="mono">TMP_ADDR</td><td class="c">&mdash;</td><td><i>rezervisan</i> (videti 8.1)</td></tr>
+    <tr><td class="mono">0x30</td><td class="mono">CTRL</td><td class="c">upis</td>
+        <td>upis vrednosti sa bitom 0 = 1 pokreće obradu</td></tr>
+    <tr><td class="mono">0x34</td><td class="mono">STATUS</td><td class="c">čitanje</td>
+        <td>bit 0 = <span class="mono">done</span> (pamti se), bit 1 = <span class="mono">busy</span></td></tr>
+  </tbody>
+</table>
+
+<p>Dva detalja u ovoj tabeli su posledica razlike između hardvera i sistemskog modela, i
+oba su bitna za softver.</p>
+
+<p class="noind"><b>Start je impuls, ne stanje.</b> Upis u <span class="mono">CTRL</span>
+proizvodi <b>jednotaktni</b> impuls <span class="mono">start</span>, jer jezgro tako
+očekuje. Da je umesto toga bio zadržan nivo, jezgro bi po završetku obrade odmah krenulo
+ponovo.</p>
+
+<p class="noind"><b>Signal <span class="mono">done</span> se pamti.</b> Jezgro ga daje kao
+jednotaktni impuls, koji bi procesor koji povremeno čita status gotovo sigurno propustio.
+Zato ga omotač pamti u bistabilu, koji se briše na sledeći
+<span class="mono">start</span>. Bit <span class="mono">busy</span> se prenosi neizmenjen.
+Ovim se razlikuje od sistemskog modela, gde je isti registar imao vrednost 0 za
+<i>zauzeto</i> i 1 za <i>gotovo</i> &mdash; ovde su to dva odvojena bita, jer se stanja
+<i>još nije počelo</i> i <i>u toku</i> inače ne mogu razlikovati.</p>
+
+<!-- ============================ 11. ZAKLJUČAK ============================ -->
+<h1>11. Zaključak</h1>
 
 <p>RT model NCC jezgra je opisan u VHDL-u, funkcionalno verifikovan, sintetizovan i
 implementiran za ciljni uređaj <span class="mono">xc7z010clg400-1</span>. Ključni
