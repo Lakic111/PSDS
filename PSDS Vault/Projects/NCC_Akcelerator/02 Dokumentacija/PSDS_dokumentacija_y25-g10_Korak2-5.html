@@ -1708,6 +1708,222 @@ Ovim se razlikuje od sistemskog modela, gde je isti registar imao vrednost 0 za
 <i>zauzeto</i> i 1 za <i>gotovo</i> &mdash; ovde su to dva odvojena bita, jer se stanja
 <i>još nije počelo</i> i <i>u toku</i> inače ne mogu razlikovati.</p>
 
+<!-- ============================ 9. INTEGRACIJA ============================ -->
+<h1>9. Integracija u sistem</h1>
+
+<h2>9.1. Topologija</h2>
+
+<p>Sistem <span class="mono">ncc_system</span> sastavljen je od procesorskog sistema
+Zynq, <b>dve</b> instance akceleratora, jednog DMA kontrolera za prenos memorija-memorija
+i jednog AXI interkonekta koji ih sve povezuje. Ceo sistem radi na <b>jednom taktu</b>,
+pa u njemu nema prelaza između taktnih domena i nije potrebno nijedno ograničenje za
+lažne putanje.</p>
+
+<figure>
+<svg viewBox="0 0 660 430" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a4" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#000"/>
+    </marker>
+  </defs>
+  <style>
+    .b  { fill:#fff; stroke:#000; stroke-width:1.2; }
+    .bi { fill:#f2f2ef; stroke:#000; stroke-width:1.2; }
+    .t  { font-size:11px; font-weight:bold; }
+    .s  { font-size:8.6px; fill:#333; font-family:Consolas,monospace; }
+    .l  { font-size:8.6px; fill:#000; font-family:Consolas,monospace; }
+    .w  { stroke:#000; stroke-width:1.2; fill:none; marker-end:url(#a4); }
+  </style>
+
+  <!-- Zynq PS -->
+  <rect class="b" x="18" y="30" width="152" height="112" rx="4"/>
+  <text class="t" x="94" y="48" text-anchor="middle">processing_system7_0</text>
+  <text class="s" x="94" y="61" text-anchor="middle">Zynq PS &middot; Cortex-A9</text>
+  <line x1="18" y1="68" x2="170" y2="68" stroke="#bbb"/>
+  <text class="l" x="28" y="84">M_AXI_GP0 (master)</text>
+  <text class="l" x="28" y="101">S_AXI_HP0 (slave, 32 b)</text>
+  <text class="s" x="28" y="120">FCLK_CLK0 = 90,909 MHz</text>
+  <text class="s" x="28" y="133">DDR3 &middot; FIXED_IO na pinove</text>
+
+  <!-- proc_sys_reset -->
+  <rect class="b" x="18" y="196" width="152" height="46" rx="4"/>
+  <text class="t" x="94" y="214" text-anchor="middle">proc_sys_reset_0</text>
+  <text class="s" x="94" y="230" text-anchor="middle">peripheral_aresetn &rarr; svi</text>
+
+  <!-- interkonekt -->
+  <rect class="bi" x="252" y="30" width="112" height="242" rx="4"/>
+  <text class="t" x="308" y="50" text-anchor="middle">axi_interconnect_0</text>
+  <text class="s" x="308" y="66" text-anchor="middle">2 mastera &rarr;</text>
+  <text class="s" x="308" y="78" text-anchor="middle">6 slave-ova</text>
+  <text class="s" x="308" y="98" text-anchor="middle">STRATEGY = 1</text>
+  <text class="s" x="308" y="110" text-anchor="middle">(deljena magistrala,</text>
+  <text class="s" x="308" y="122" text-anchor="middle">bez punog krosbara)</text>
+  <text class="s" x="308" y="146" text-anchor="middle">arbitracija umesto</text>
+  <text class="s" x="308" y="158" text-anchor="middle">paralelnih putanja</text>
+
+  <!-- ncc0 -->
+  <rect class="b" x="438" y="30" width="204" height="52" rx="4"/>
+  <text class="t" x="540" y="48" text-anchor="middle">ncc0 : ncc_accel</text>
+  <text class="s" x="540" y="63" text-anchor="middle">S00 kontrola &middot; S01 memorije</text>
+  <text class="s" x="540" y="76" text-anchor="middle">0x5000_0000 &middot; 0x5002_0000</text>
+
+  <!-- ncc1 -->
+  <rect class="b" x="438" y="100" width="204" height="52" rx="4"/>
+  <text class="t" x="540" y="118" text-anchor="middle">ncc1 : ncc_accel</text>
+  <text class="s" x="540" y="133" text-anchor="middle">S00 kontrola &middot; S01 memorije</text>
+  <text class="s" x="540" y="146" text-anchor="middle">0x5100_0000 &middot; 0x5102_0000</text>
+
+  <!-- cdma -->
+  <rect class="b" x="438" y="196" width="204" height="60" rx="4"/>
+  <text class="t" x="540" y="214" text-anchor="middle">axi_cdma_0</text>
+  <text class="s" x="540" y="229" text-anchor="middle">memorija&ndash;memorija, 32 b</text>
+  <text class="s" x="540" y="242" text-anchor="middle">S_AXI_LITE slave &middot; M_AXI master</text>
+  <text class="s" x="540" y="253" text-anchor="middle">0x6000_0000</text>
+
+  <!-- PS GP0 -> interkonekt S00 -->
+  <path class="w" d="M170,84 L252,84"/>
+  <text class="s" x="211" y="79" text-anchor="middle">S00</text>
+
+  <!-- interkonekt -> ncc0 / ncc1 -->
+  <path class="w" d="M364,48 L438,48"/>
+  <text class="s" x="400" y="43" text-anchor="middle">M00, M01</text>
+  <path class="w" d="M364,118 L438,118"/>
+  <text class="s" x="400" y="113" text-anchor="middle">M02, M03</text>
+
+  <!-- interkonekt -> cdma S_AXI_LITE -->
+  <path class="w" d="M364,214 L438,214"/>
+  <text class="s" x="400" y="209" text-anchor="middle">M04</text>
+
+  <!-- cdma M_AXI -> interkonekt S01 (drugi master) -->
+  <path class="w" d="M540,256 L540,300 L322,300 L322,272"/>
+  <text class="s" x="430" y="312" text-anchor="middle">M_AXI &rarr; S01 (drugi master)</text>
+
+  <!-- interkonekt M05 -> PS S_AXI_HP0 (DDR).
+       Vertikala je na x=200, DESNO od proc_sys_reset-a (koji se zavrsava na x=170) --
+       inace strelica prolazi kroz tu kutiju. Ulazi u PS na liniji porta S_AXI_HP0. -->
+  <path class="w" d="M284,272 L284,344 L200,344 L200,101 L170,101"/>
+  <text class="s" x="300" y="358" text-anchor="middle">M05 &rarr; S_AXI_HP0 (DDR)</text>
+
+  <!-- takt -->
+  <text class="s" x="330" y="398" text-anchor="middle">jedan takt na sve blokove &mdash; bez prelaza između taktnih domena</text>
+</svg>
+<figcaption><b>Slika 4.</b> Topologija integrisanog sistema <span class="mono">ncc_system</span>:
+Zynq PS, dve instance akceleratora, DMA memorija&ndash;memorija i jedan AXI interkonekt</figcaption>
+</figure>
+
+<p class="noind"><b>Zašto jedan interkonekt, a ne dva.</b> AXI slave interfejs može biti
+povezan na <b>samo jedan</b> interkonekt. Pošto memorijskom interfejsu
+<span class="mono">S01</span> moraju pristupati i procesor i DMA, oba moraju ulaziti u
+isti interkonekt &mdash; odatle konfiguracija sa dva mastera i šest slave-ova.</p>
+
+<p class="noind"><b>Zašto deljena magistrala, a ne pun krosbar.</b> Prva verzija koristila
+je interkonekt koji uvek gradi pun krosbar sa protočnim stepenom na svakom portu. U
+konfiguraciji 2&times;6 to je trošilo <b>8.673 LUT</b> &mdash; skoro polovinu celog
+budžeta logike uređaja &mdash; i obaralo vremenska ograničenja. Zamenom deljenom
+magistralom sa arbitracijom zauzeće je palo na <b>1.616 LUT</b>, dakle na manje od
+petine. Za ovaj saobraćaj je to dovoljno, jer se dva mastera ionako serijalizuju u
+softveru: procesor čeka da DMA prenos završi pre nego što nastavi.</p>
+
+<p class="noind"><b>Zašto je port <span class="mono">S_AXI_HP0</span> sužen na 32 bita.</b>
+Portovi visokih performansi na Zynq-u su nativno 64-bitni, jer su predviđeni za širok
+saobraćaj ka DDR-u. Sve ostalo u ovom sistemu je 32-bitno. Interkonekt širinu krosbara
+određuje po <i>najširem</i> portu, pa je zbog tog jednog porta gradio 64-bitnu magistralu
+i lepio konvertor širine na <b>svaki</b> 32-bitni port &mdash; šest konvertora za
+konverziju koju nijedan blok nije tražio. Sužavanjem porta na 32 bita svi su nestali:
+<b>3.334 LUT i 3.659 flip-flopova manje</b>. Propusnost se pri tome ne gubi, jer je DMA
+kontroler 32-bitni i širinu od 64 bita nikad nije mogao ni iskoristiti.</p>
+
+<h2>9.2. Adresna mapa</h2>
+
+<p>Mapa je fiksirana u skripti koja gradi sistem, a ne prepuštena automatskom
+dodeljivanju. Time se dobija da rekonstrukcija sistema uvek daje iste adrese, što je
+uslov da softver iz prethodne faze projekta radi bez izmena.</p>
+
+<table>
+  <caption><b>Tabela 17.</b> Adresna mapa, po masteru</caption>
+  <thead>
+    <tr><th>Master</th><th>Slave</th><th class="mono">Bazna adresa</th><th class="n">Opseg</th></tr>
+  </thead>
+  <tbody>
+    <tr><td rowspan="5">PS <span class="mono">M_AXI_GP0</span></td>
+        <td><span class="mono">ncc0.S00_AXI</span> (kontrola)</td><td class="mono">0x5000_0000</td><td class="n">4 KB</td></tr>
+    <tr><td><span class="mono">ncc0.S01_AXI</span> (memorije)</td><td class="mono">0x5002_0000</td><td class="n">128 KB</td></tr>
+    <tr><td><span class="mono">ncc1.S00_AXI</span></td><td class="mono">0x5100_0000</td><td class="n">4 KB</td></tr>
+    <tr><td><span class="mono">ncc1.S01_AXI</span></td><td class="mono">0x5102_0000</td><td class="n">128 KB</td></tr>
+    <tr><td><span class="mono">axi_cdma_0.S_AXI_LITE</span></td><td class="mono">0x6000_0000</td><td class="n">64 KB</td></tr>
+    <tr><td rowspan="3">DMA <span class="mono">M_AXI</span></td>
+        <td>PS <span class="mono">S_AXI_HP0</span> (DDR)</td><td class="mono">0x0000_0000</td><td class="n">iz PS podešavanja</td></tr>
+    <tr><td><span class="mono">ncc0.S01_AXI</span></td><td class="mono">0x5002_0000</td><td class="n">128 KB</td></tr>
+    <tr><td><span class="mono">ncc1.S01_AXI</span></td><td class="mono">0x5102_0000</td><td class="n">128 KB</td></tr>
+  </tbody>
+</table>
+
+<p>Vidljivost je namerno različita po masteru. DMA <b>ne vidi</b> kontrolne registre, jer
+mu ne trebaju &mdash; sužavanjem njegove mape smanjuje se šansa da pogrešno programiran
+prenos upiše nešto u registre. Procesor <b>ne vidi</b> DDR kroz programabilnu logiku, jer
+mu do sopstvene memorije vodi direktan put kroz procesorski sistem.</p>
+
+<p class="noind">Tri bazne adrese &mdash; <span class="mono">0x5000_0000</span>,
+<span class="mono">0x5100_0000</span> i <span class="mono">0x6000_0000</span> &mdash; su
+<b>identične</b> konstantama iz sistemskog modela prethodne faze. Opseg od 4&nbsp;KB za
+kontrolne registre je najmanji koji alat dopušta za AXI segment; blok dekodira samo donjih
+šest bita, pa se registri unutar tog prozora ponavljaju, što je bezopasno.</p>
+
+<h2>9.3. Tok podataka po jednom polju table</h2>
+
+<p>Softver za svako neprazno polje šahovske table izvršava sledeći niz. Redosled je
+određen time što su memorije jednostruko baferovane, pa jezgro ne može računati dok se
+u njega upisuje.</p>
+
+<ol>
+  <li>Procesor iz slike u DDR-u proverava da li je polje prazno &mdash; bez ikakvog
+      pristupa programabilnoj logici.</li>
+  <li>Procesor u DDR-u priprema bafer u kome je <b>jedan piksel po 32-bitnoj reči</b>, pa
+      ga izbacuje iz keša, da bi DMA video tačne podatke.</li>
+  <li>DMA prenosi segment slike iz DDR-a u <span class="mono">S01 + 0x00000</span>, prvo
+      jednog pa drugog akceleratora.</li>
+  <li>DMA prenosi šablon u <span class="mono">S01 + 0x08000</span>. Šabloni se raspakuju
+      <b>jednom na početku programa</b>, ne po svakom polju.</li>
+  <li>Procesor upisuje dimenzije u registre, pa upisom u <span class="mono">CTRL</span>
+      pokreće obradu na oba bloka.</li>
+  <li>Procesor u petlji čita <span class="mono">STATUS</span> i čeka bit
+      <span class="mono">done</span> na oba bloka.</li>
+  <li>DMA prenosi mapu rezultata iz <span class="mono">S01 + 0x10000</span> u DDR;
+      procesor poništava keš nad tim opsegom i traži maksimum.</li>
+</ol>
+
+<h2>9.4. Dva pravila koja softver mora poštovati</h2>
+
+<p class="noind"><b>Skorovi se porede kao neoznačeni brojevi.</b> Vrednost
+<span class="mono">0x80000000</span> označava NCC<sup>2</sup>&nbsp;=&nbsp;1,0, dakle
+savršeno poklapanje &mdash; ali tumačena kao označen 32-bitni ceo broj ona je
+<b>negativna</b>. Softver koji traži maksimum polazeći od &minus;1 i koristi označeno
+poređenje odbacio bi upravo savršeno poklapanje. Na realnim podacima se to ne javlja, jer
+je prag odlučivanja 0,5625, ali je greška latentna i mora biti izbegnuta.</p>
+
+<p class="noind"><b>Nikad DMA i procesor nad istim memorijskim interfejsom istovremeno.</b>
+Unutar bloka adresa se pri istovremenom čitanju i upisu vodi po čitanju, a upis nije
+zabranjen &mdash; pa bi se u tom slučaju upis obavio na adresu koja se čita. Situacija je
+sa jednim procesorom i jednim DMA kanalom nedostižna, jer se oni serijalizuju u softveru,
+i zato arbitracija nije ni ugrađena: bila bi mrtav hardver. Ali invarijanta mora biti
+zapisana, jer je hardver ne proverava.</p>
+
+<h2>9.5. Zašto DMA, iako nije performansni dobitak</h2>
+
+<p>DMA je u ovom sistemu izabran zato što ga zadatak izričito navodi među komponentama za
+integraciju, i zato što je popravka burst prenosa (odeljak 7.5) ionako bila neophodna
+&mdash; a ne zato što donosi značajno ubrzanje. To treba reći otvoreno, sa brojkama.</p>
+
+<p>Po jednom polju table prenosi se oko 146&nbsp;KB. Ako prenos radi procesor
+pojedinačnim pristupima, to traje oko 3,4&nbsp;ms, odnosno oko 7&nbsp;% ukupnog vremena
+obrade jednog polja. DMA isti posao obavi za oko 0,4&nbsp;ms, dakle oko 1&nbsp;%.
+<b>Neto dobitak je oko 6&nbsp;% ukupnog vremena.</b></p>
+
+<p>Preklapanje prenosa sa računanjem &mdash; što bi bio pravi dobitak &mdash; nije moguće
+ni u jednom od dva slučaja, jer su memorije jednostruko baferovane i jezgro ih čita dok
+računa. DMA je zato <i>brži prenos</i>, a ne <i>skrivena latencija</i>. Dvostruko
+baferovanje memorije slike bilo bi izmena u samom bloku i pravac za dalji rad.</p>
+
 <!-- ============================ 11. ZAKLJUČAK ============================ -->
 <h1>11. Zaključak</h1>
 
