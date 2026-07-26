@@ -624,7 +624,7 @@ grane petlji.</p>
 
 <!-- SVG: ASMD -->
 <figure class="tall">
-<svg viewBox="0 0 660 1100" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+<svg viewBox="0 0 660 1180" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
   <defs>
     <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6 z" fill="#000"/>
@@ -651,10 +651,10 @@ grane petlji.</p>
   <text class="pl" transform="translate(80,302) rotate(-90)" text-anchor="middle">FAZA B</text>
   <rect class="ph" x="72" y="402" width="304" height="322" rx="5"/>
   <text class="pl" transform="translate(80,563) rotate(-90)" text-anchor="middle">FAZA C</text>
-  <rect class="ph" x="72" y="726" width="304" height="118" rx="5"/>
-  <text class="pl" transform="translate(80,785) rotate(-90)" text-anchor="middle">FAZA D</text>
-  <rect class="ph" x="72" y="846" width="304" height="200" rx="5"/>
-  <text class="pl" transform="translate(80,946) rotate(-90)" text-anchor="middle">FAZA E</text>
+  <rect class="ph" x="72" y="726" width="304" height="158" rx="5"/>
+  <text class="pl" transform="translate(80,805) rotate(-90)" text-anchor="middle">FAZA D</text>
+  <rect class="ph" x="72" y="886" width="304" height="240" rx="5"/>
+  <text class="pl" transform="translate(80,1006) rotate(-90)" text-anchor="middle">FAZA E</text>
 
   <!-- RESET -->
   <ellipse cx="200" cy="22" rx="30" ry="13" class="st"/>
@@ -730,7 +730,7 @@ grane petlji.</p>
   <!-- D3 v<res_h? -->
   <path class="st" d="M200,440 L252,455 L200,470 L148,455 z"/>
   <text class="lb" x="200" y="458" text-anchor="middle">v &lt; res_h ?</text>
-  <path class="lnd" d="M252,455 L416,455 L416,1059 L360,1059"/>
+  <path class="lnd" d="M252,455 L416,455 L416,1139 L360,1139"/>
   <text class="lb" x="300" y="450">ne (v &ge; res_h)</text>
   <path class="ln" d="M200,470 L200,482"/>
   <text class="lb" x="216" y="480">da</text>
@@ -795,57 +795,69 @@ grane petlji.</p>
   <!-- 17 S_L_YX_DRAIN -->
   <rect class="st" x="88" y="810" width="224" height="30" rx="4"/>
   <text class="nm" x="200" y="824" text-anchor="middle">S_L_YX_DRAIN</text>
-  <text class="op" x="200" y="835" text-anchor="middle">akumuliraj poslednji piksel</text>
-  <path class="ln" d="M200,840 L200,852"/>
+  <text class="op" x="200" y="835" text-anchor="middle">df,dt &lt;= poslednji ; acc += df_reg&middot;dt_reg</text>
+  <path class="ln" d="M200,840 L200,850"/>
 
-  <!-- 18 S_NCC_DIV -->
-  <rect class="st" x="88" y="852" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="866" text-anchor="middle">S_NCC_DIV</text>
-  <text class="op" x="200" y="877" text-anchor="middle">num_sq&lt;=sum_num² ; den_prod&lt;=denf·dent</text>
-  <path class="ln" d="M200,882 L200,890"/>
+  <!-- 18 S_L_YX_DRAIN2 (novo, Korak 8b) -->
+  <rect class="st" x="88" y="850" width="224" height="30" rx="4"/>
+  <text class="nm" x="200" y="864" text-anchor="middle">S_L_YX_DRAIN2</text>
+  <text class="op" x="200" y="875" text-anchor="middle">acc += df_reg&middot;dt_reg (poslednji) ; mac_v&lt;=0</text>
+  <path class="ln" d="M200,880 L200,892"/>
+
+  <!-- 19 S_NCC_SQ (novo, Korak 8b) -->
+  <rect class="st" x="88" y="892" width="224" height="30" rx="4"/>
+  <text class="nm" x="200" y="906" text-anchor="middle">S_NCC_SQ</text>
+  <text class="op" x="200" y="917" text-anchor="middle">num_sq&lt;=sum_num&sup2; ; den_prod&lt;=sum_den_f&middot;sum_den_t</text>
+  <path class="ln" d="M200,922 L200,930"/>
 
   <!-- D5 den=0? -->
-  <path class="st" d="M200,890 L258,905 L200,920 L142,905 z"/>
-  <text class="lb" x="200" y="908" text-anchor="middle">den = 0 ?</text>
-  <path class="lnd" d="M258,905 L398,905 L398,1023 L314,1023"/>
-  <text class="lb" x="300" y="900">da &rarr; result 0</text>
-  <path class="ln" d="M200,920 L200,931"/>
-  <text class="lb" x="206" y="930">ne</text>
+  <path class="st" d="M200,930 L258,945 L200,960 L142,945 z"/>
+  <text class="lb" x="200" y="948" text-anchor="middle">den = 0 ?</text>
+  <path class="lnd" d="M258,945 L398,945 L398,1103 L314,1103"/>
+  <text class="lb" x="300" y="940">da &rarr; result 0</text>
+  <path class="ln" d="M200,960 L200,971"/>
+  <text class="lb" x="206" y="970">ne</text>
 
-  <!-- 19 S_NCC_WAIT -->
-  <rect class="st" x="88" y="931" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="945" text-anchor="middle">S_NCC_WAIT</text>
-  <text class="op" x="200" y="956" text-anchor="middle">div_ncc: (num_sq&lt;&lt;31)/den_prod</text>
-  <path class="ln" d="M200,961 L200,968"/>
+  <!-- 20 S_NCC_DIV -->
+  <rect class="st" x="88" y="971" width="224" height="30" rx="4"/>
+  <text class="nm" x="200" y="985" text-anchor="middle">S_NCC_DIV</text>
+  <text class="op" x="200" y="996" text-anchor="middle">div_ncc start: (num_sq&lt;&lt;31)/den_prod</text>
+  <path class="ln" d="M200,1001 L200,1011"/>
+
+  <!-- 21 S_NCC_WAIT -->
+  <rect class="st" x="88" y="1011" width="224" height="30" rx="4"/>
+  <text class="nm" x="200" y="1025" text-anchor="middle">S_NCC_WAIT</text>
+  <text class="op" x="200" y="1036" text-anchor="middle">čekaj dn_done ; result_q &lt;= dn_quot</text>
+  <path class="ln" d="M200,1041 L200,1048"/>
 
   <!-- D6 gotovo? -->
-  <path class="st" d="M200,968 L248,982 L200,996 L152,982 z"/>
-  <text class="lb" x="200" y="985" text-anchor="middle">gotovo ?</text>
-  <path class="lnd" d="M248,982 L344,982 L344,945 L314,945"/>
-  <text class="lb" x="342" y="968" text-anchor="end">ne</text>
-  <path class="ln" d="M200,996 L200,1007"/>
+  <path class="st" d="M200,1048 L248,1062 L200,1076 L152,1062 z"/>
+  <text class="lb" x="200" y="1065" text-anchor="middle">gotovo ?</text>
+  <path class="lnd" d="M248,1062 L344,1062 L344,1026 L314,1026"/>
+  <text class="lb" x="342" y="1048" text-anchor="end">ne</text>
+  <path class="ln" d="M200,1076 L200,1087"/>
 
-  <!-- 20 S_WRITE_RESULT -->
-  <rect class="st" x="88" y="1007" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="1021" text-anchor="middle">S_WRITE_RESULT</text>
-  <text class="op" x="200" y="1033" text-anchor="middle">result_map[v·res_w+u] &lt;= result_q</text>
-  <path class="ln" d="M200,1039 L200,1045"/>
+  <!-- 22 S_WRITE_RESULT -->
+  <rect class="st" x="88" y="1087" width="224" height="32" rx="4"/>
+  <text class="nm" x="200" y="1101" text-anchor="middle">S_WRITE_RESULT</text>
+  <text class="op" x="200" y="1113" text-anchor="middle">result_map[v&middot;res_w+u] &lt;= result_q</text>
+  <path class="ln" d="M200,1119 L200,1125"/>
 
   <!-- D7 u+1<res_w? -->
-  <path class="st" d="M200,1045 L268,1060 L200,1075 L132,1060 z"/>
-  <text class="lb" x="200" y="1063" text-anchor="middle">u+1 &lt; res_w ?</text>
-  <path class="lnd" d="M132,1060 L58,1060 L58,495 L88,495"/>
+  <path class="st" d="M200,1125 L268,1140 L200,1155 L132,1140 z"/>
+  <text class="lb" x="200" y="1143" text-anchor="middle">u+1 &lt; res_w ?</text>
+  <path class="lnd" d="M132,1140 L58,1140 L58,495 L88,495"/>
   <text class="lb" x="54" y="770" text-anchor="end">da</text>
-  <path class="lnd" d="M200,1075 L200,1088 L44,1088 L44,420 L88,420"/>
-  <text class="lb" x="150" y="1085">ne (novi red, v++)</text>
+  <path class="lnd" d="M200,1155 L200,1168 L44,1168 L44,420 L88,420"/>
+  <text class="lb" x="150" y="1165">ne (novi red, v++)</text>
 
-  <!-- 21 S_DONE -->
-  <rect class="st" x="360" y="1044" width="140" height="30" rx="4"/>
-  <text class="nm" x="430" y="1059" text-anchor="middle">S_DONE</text>
-  <text class="op" x="430" y="1070" text-anchor="middle">busy&lt;=0 ; done&lt;=1</text>
-  <path class="ln" d="M500,1059 L540,1059 L540,30 L200,30 L200,44"/>
+  <!-- 23 S_DONE -->
+  <rect class="st" x="360" y="1124" width="140" height="30" rx="4"/>
+  <text class="nm" x="430" y="1139" text-anchor="middle">S_DONE</text>
+  <text class="op" x="430" y="1150" text-anchor="middle">busy&lt;=0 ; done&lt;=1</text>
+  <path class="ln" d="M500,1139 L540,1139 L540,30 L200,30 L200,44"/>
 </svg>
-<figcaption><b>Slika 1.</b> ASMD dijagram kontrolne jedinice NCC jezgra (svih 21 stanje, pet faza)</figcaption>
+<figcaption><b>Slika 1.</b> ASMD dijagram kontrolne jedinice NCC jezgra (svih 23 stanja, pet faza)</figcaption>
 </figure>
 
 <h2>5.2. Faza A: učitavanje slike i izgradnja SAT</h2>
