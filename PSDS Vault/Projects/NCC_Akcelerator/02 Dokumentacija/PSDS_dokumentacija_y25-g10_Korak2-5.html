@@ -212,9 +212,21 @@ kao <b>izvršna specifikacija</b>: RTL model mora dati bit-identičan rezultat.<
 <h2>1.3. Ciljna platforma i korišćeni alati</h2>
 
 <p>Ciljna platforma je razvojna ploča <b>Zybo Z7-10</b> sa uređajem
-<b>xc7z010-clg225-2</b> (Zynq-7000). Uređaj raspolaže sa 17.600 LUT, 35.200 flip-flopova,
-80 DSP48E1 blokova i 60 blokova RAMB36. Pretpostavljeni takt programabilne logike je
-100&nbsp;MHz, odnosno period 10&nbsp;ns.</p>
+<b>xc7z010clg400-1</b> (Zynq-7000). Uređaj raspolaže sa 17.600 LUT, 35.200 flip-flopova,
+80 DSP48E1 blokova i 60 blokova RAMB36.</p>
+
+<p class="noind">Napomena o oznaci uređaja: dokumentacija prethodne faze projekta navodi
+<span class="mono">xc7z010-clg225-2</span>, ali to je bio podrazumevani uređaj alata
+Vitis HLS, a ne stvarna ploča &mdash; <b>nijedna Digilent ploča sa Zynq-7010 ne koristi
+kućište <span class="mono">clg225</span></b>. Isti je čip i isti kapacitet, ali je
+brzinska klasa <span class="mono">-1</span> umesto <span class="mono">-2</span>, dakle
+sporija. Sve brojke u ovom dokumentu su merene na
+<span class="mono">clg400-1</span>.</p>
+
+<p class="noind">Nominalni takt programabilne logike je 100&nbsp;MHz (period 10&nbsp;ns) i
+samostalno jezgro ga ispunjava (odeljak 7.3). U integrisanom sistemu takt je
+<b>90,909&nbsp;MHz</b>, jer PLL procesorskog sistema za traženih 95&nbsp;MHz daje
+1000/11 &mdash; odstupanje od nominalnih 100&nbsp;MHz je 9,1&nbsp;% (odeljak 10.3).</p>
 
 <p>RT model je opisan u jeziku <b>VHDL-2008</b> i razvijen ručno iz ASMD dijagrama,
 bez visokonivoske sinteze. Simulacija je izvršena alatom <b>XSim</b>, a sinteza i
@@ -1313,73 +1325,107 @@ između kvadriranja i delioca) &mdash; oni takt-granicu unose unutar prikazanih 
 promene redosleda blokova ni toka podataka (Tabela 6, §6.2).</p>
 
 <!-- ============================ 7. SINTEZA ============================ -->
-<h1>7. Analiza posle sinteze</h1>
+<h1>7. Analiza posle sinteze i implementacije</h1>
 
 <h2>7.1. Metod</h2>
 
 <p>Analiza je sprovedena nad opisom u fajlovima <code>ncc_pkg.vhd</code> i
 <code>ncc_core.vhd</code>, koji zajedno čine ceo dizajn (modul
-<code>seq_divider</code> nalazi se u istom fajlu kao i jezgro).</p>
+<code>seq_divider</code> nalazi se u istom fajlu kao i jezgro). Ovo poglavlje analizira
+<b>samostalno jezgro</b>; analiza celog integrisanog sistema je u poglavlju 10.</p>
 
 <ul class="plain">
-  <li><b>Sinteza i vremenska analiza:</b> Vivado 2025.2, komanda
-      <span class="mono">synth_design -top ncc_core -part xc7z010clg225-2</span>,
-      zatim <span class="mono">create_clock -period 10.000</span> i izveštaji
+  <li><b>Sinteza, implementacija i vremenska analiza:</b> Vivado 2025.2,
+      <span class="mono">synth_design -mode out_of_context -top ncc_core -part
+      xc7z010clg400-1</span>, pa pun tok implementacije
+      (<span class="mono">opt_design</span>, <span class="mono">place_design</span>,
+      <span class="mono">phys_opt_design</span>, <span class="mono">route_design</span>,
+      <span class="mono">phys_opt_design</span>) i izveštaji
       <span class="mono">report_utilization</span> i
-      <span class="mono">report_timing_summary</span>.</li>
+      <span class="mono">report_timing_summary</span>. Sve brojke u ovom poglavlju su
+      <b>post-route</b>, ne post-sintezne.</li>
   <li><b>Funkcionalna provera i merenje latencije:</b> XSim, simulacija ponašanja nad
       stvarnim podacima; testbench broji takte u kojima je signal
       <span class="mono">busy</span> aktivan.</li>
 </ul>
 
+<p class="noind"><b>Dve metodološke odluke koje utiču na brojke.</b> Prvo, ograničenje
+takta se čita <b>pre</b> <span class="mono">synth_design</span>-a: ako se
+<span class="mono">create_clock</span> izda posle sinteze, jezgro se sintetiše bez
+vremenskog cilja, pa je svaka izmerena rezerva merena nad kolom od koga zadata
+frekvencija nikad nije ni tražena. Drugo, koristi se
+<span class="mono">-mode out_of_context</span>: golo jezgro ima 118 portova, a paket
+<span class="mono">clg400</span> nudi 100 korisničkih pinova, pa bi bez tog režima alat
+procenjivao rutiranje nad nemogućim razmeštajem.</p>
+
 <h2>7.2. Utrošeni resursi</h2>
 
 <table>
-  <caption><b>Tabela 9.</b> Utrošeni resursi posle sinteze (xc7z010-clg225-2)</caption>
+  <caption><b>Tabela 9.</b> Utrošeni resursi samostalnog jezgra posle implementacije
+  (xc7z010clg400-1, post-route)</caption>
   <thead>
     <tr><th>Resurs</th><th class="n">Utrošeno</th><th class="n">Raspoloživo</th><th class="n">Iskorišćenost</th></tr>
   </thead>
   <tbody>
-    <tr><td>Slice LUT (sve kao logika)</td><td class="n">1.526</td><td class="n">17.600</td><td class="n">8,67 %</td></tr>
-    <tr><td>Slice registri (FF)</td><td class="n">554</td><td class="n">35.200</td><td class="n">1,57 %</td></tr>
+    <tr><td>Slice LUT (sve kao logika)</td><td class="n">1.472</td><td class="n">17.600</td><td class="n">8,36 %</td></tr>
+    <tr><td>Slice registri (FF)</td><td class="n">664</td><td class="n">35.200</td><td class="n">1,89 %</td></tr>
     <tr><td>DSP48E1</td><td class="n">9</td><td class="n">80</td><td class="n">11,25 %</td></tr>
     <tr><td>Block RAM (RAMB36E1)</td><td class="n">9</td><td class="n">60</td><td class="n">15,00 %</td></tr>
+    <tr><td>LUT kao memorija</td><td class="n"><b>0</b></td><td class="n">6.000</td><td class="n">0,00 %</td></tr>
   </tbody>
 </table>
 
-<p>Jezgro zauzima manje od devetine logičkih resursa uređaja. To je i bio cilj:
-sistemski model predviđa <b>dve</b> paralelne instance, a pored njih u programabilnoj
-logici moraju stati i AXI interkonekt, kontroler blok-memorije i DMA. Sa 8,67&nbsp;%
-po instanci, dve instance troše oko 17&nbsp;% LUT-ova i ostavljaju veliku rezervu.</p>
+<p>Jezgro zauzima manje od devetine logičkih resursa uređaja. Red <i>LUT kao memorija</i>
+je jednak nuli, što je potvrda da je integralna slika stvarno smeštena u blok-memoriju,
+a ne raspodeljena po LUT-ovima &mdash; to je bio cilj, jer bi distribuirana memorija te
+veličine sama pojela ceo budžet logike.</p>
+
+<p>Sistemski model predviđa <b>dve</b> paralelne instance, a pored njih u programabilnoj
+logici moraju stati i AXI interkonekt i DMA. Ovde je važna razlika u tome
+<i>šta</i> se meri: brojke iz Tabele 9 su <b>golo jezgro</b>, dok je u integrisanom
+sistemu jedna instanca ceo IP <span class="mono">ncc_accel</span> &mdash; jezgro
+<i>plus</i> dva AXI kontrolera i memorijski podsistem &mdash; što po instanci iznosi
+1.910 LUT, ne 1.472. Izmereno zauzeće celog sistema je <b>35,6&nbsp;%</b> LUT-ova
+(odeljak 10.2), i time staje sa rezervom.</p>
 
 <h2>7.3. Kritična putanja i maksimalna frekvencija</h2>
 
 <table>
-  <caption><b>Tabela 10.</b> Rezultati vremenske analize pri periodu takta od 10 ns</caption>
+  <caption><b>Tabela 10.</b> Rezultati vremenske analize samostalnog jezgra
+  (post-route, xc7z010clg400-1), pri dva zadata perioda takta</caption>
   <thead>
-    <tr><th>Veličina</th><th class="n">Vrednost</th></tr>
+    <tr><th>Veličina</th><th class="n">pri 11,000 ns</th><th class="n">pri 10,000 ns</th></tr>
   </thead>
   <tbody>
-    <tr><td>Zadati period takta</td><td class="n">10,000 ns (100 MHz)</td></tr>
-    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+1,179 ns</b></td></tr>
-    <tr><td>Kašnjenje kritične putanje</td><td class="n">8,670 ns<br>(logika 6,860 ns &middot; rutiranje 1,810 ns)</td></tr>
-    <tr><td>Broj nivoa logike na kritičnoj putanji</td><td class="n">12 (8&times;CARRY4, 2&times;DSP48E1, 2&times;LUT)</td></tr>
-    <tr><td><b>Maksimalna frekvencija</b></td><td class="n"><b>~113 MHz</b> (period 8,821 ns)</td></tr>
-    <tr><td>Najgora rezerva za zadržavanje (WHS)</td><td class="n">+0,127 ns</td></tr>
-    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n">0 od 1.445</td></tr>
+    <tr><td>Zadata frekvencija</td><td class="n">90,909 MHz</td><td class="n">100 MHz</td></tr>
+    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+0,387 ns</b></td><td class="n"><b>+0,146 ns</b></td></tr>
+    <tr><td>Kašnjenje kritične putanje</td><td class="n">10,638 ns<br>(logika 5,719 &middot; rutiranje 4,919)</td><td class="n">9,832 ns<br>(logika 7,901 &middot; rutiranje 1,931)</td></tr>
+    <tr><td>Broj nivoa logike</td><td class="n">16 (9&times;CARRY4, LUT)</td><td class="n">12 (10&times;CARRY4, 2&times;DSP48E1)</td></tr>
+    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n">0 od 1.804</td><td class="n">0</td></tr>
+    <tr><td><b>Maksimalna frekvencija</b></td><td class="n" colspan="2"><b>~101,5 MHz</b></td></tr>
   </tbody>
 </table>
 
-<p><b>Dizajn zatvara ograničenje od 100 MHz sa rezervom od 1,179 ns</b>, uz pozitivnu
-rezervu i za zadržavanje. Nijedna od 1.445 krajnjih tačaka ne krši ograničenje.
-Ostvariva frekvencija je približno 113 MHz.</p>
+<p><b>Samostalno jezgro zatvara i ograničenje od 100 MHz</b>, sa rezervom od
+0,146&nbsp;ns; ostvariva frekvencija je približno 101,5&nbsp;MHz. Nijedna krajnja tačka
+ne krši ograničenje ni pri jednom od dva perioda.</p>
 
-<p>Kritična putanja vodi od akumulatora <span class="mono">sum_num_reg[16]</span> do
-radnog registra delioca <span class="mono">div_ncc/work_reg[78]</span>, dakle kroz
-kvadriranje brojioca i ulaz u 83-bitni delilac. Da je kritična putanja bila unutar
-same unutrašnje petlje, jedini lek bio bi dodatni protočni stepen; ovako je ona na
-putanji koja se izvršava jednom po poziciji prozora, pa bi se po potrebi mogla
-registrovati bez uticaja na propusnost.</p>
+<p class="noind"><b>Zašto su navedena dva merenja.</b> Alat optimizuje <i>do</i> zadatog
+ograničenja i staje čim ga ispuni, pa je kritična putanja pri labavijem ograničenju
+<i>duža</i>: na 11&nbsp;ns iznosi 10,638&nbsp;ns sa 46&nbsp;% rutiranja, a na 10&nbsp;ns
+svega 9,832&nbsp;ns sa 20&nbsp;% rutiranja &mdash; jer je alat pri strožem cilju
+kvadriranje mapirao u <span class="mono">DSP48E1</span> umesto u lanac prenosa. To je
+isti RTL u dve različite implementacije. Vremenska rezerva se zato <b>ne sme
+aritmetički prevoditi</b> između ograničenja, a maksimalna frekvencija se navodi na
+osnovu merenja na onom ograničenju koje se tvrdi.</p>
+
+<p>Kritična putanja vodi od akumulatora <span class="mono">sum_num_reg</span> do
+registra <span class="mono">num_sq_reg</span>, dakle kroz kvadriranje brojioca. Ona se
+izvršava <b>jednom po poziciji prozora</b>, a ne u unutrašnjoj petlji &mdash; zato je
+presek registrom na tom mestu (odeljak 5.6) koštao samo jedan takt po prozoru, oko
+0,2&nbsp;% latencije. Nakon tog preseka putanja kroz 83-bitni delilac više nije
+vezujuća; u integrisanom sistemu vezujuća postaje adresna putanja unutar jezgra, i to
+tek pod pritiskom razmeštaja (odeljak 10.3).</p>
 
 <p>Ovaj rezultat je posledica jedne projektne odluke: sva tri deljenja izvode se
 sekvencijalno, jedan bit količnika po taktu. Kombinaciono deljenje promenljivim
@@ -1402,38 +1448,51 @@ pozicija prozora.</p>
     <tr><th>Veličina</th><th class="n">Vrednost</th></tr>
   </thead>
   <tbody>
-    <tr><td>Latencija po pozivu (izmereno)</td><td class="n"><b>2.451.212 taktova</b></td></tr>
-    <tr><td>Vreme po pozivu pri 100 MHz</td><td class="n"><b>24,51 ms</b></td></tr>
+    <tr><td>Latencija po pozivu (izmereno)</td><td class="n"><b>2.461.201 taktova</b></td></tr>
     <tr><td>Broj obrađenih pozicija prozora</td><td class="n">5.016</td></tr>
-    <tr><td>Vreme po poziciji prozora</td><td class="n">4,89 &micro;s</td></tr>
-    <tr><td>Propusnost</td><td class="n">~204.600 pozicija/s</td></tr>
-    <tr><td>Taktova po piksel-operaciji</td><td class="n">1,30</td></tr>
+    <tr><td>Taktova po piksel-operaciji</td><td class="n">1,31</td></tr>
+    <tr><td>Vreme po pozivu pri 100 MHz</td><td class="n"><b>24,61 ms</b></td></tr>
+    <tr><td>&emsp;&rarr; propusnost</td><td class="n">~203.800 pozicija/s (4,91 &micro;s po poziciji)</td></tr>
+    <tr><td>Vreme po pozivu pri 90,909 MHz</td><td class="n"><b>27,07 ms</b></td></tr>
+    <tr><td>&emsp;&rarr; propusnost</td><td class="n">~185.300 pozicija/s (5,40 &micro;s po poziciji)</td></tr>
   </tbody>
 </table>
+
+<p class="noind"><b>Zašto dve frekvencije.</b> Latencija u taktovima je svojstvo dizajna
+i ne zavisi od takta; vreme zavisi. Samostalno jezgro zatvara 100&nbsp;MHz (odeljak 7.3),
+ali u integrisanom sistemu takt je <b>90,909&nbsp;MHz</b>, jer PLL procesorskog sistema
+za traženih 95&nbsp;MHz daje 1000/11 (odeljak 10.3). Navedene su zato obe brojke:
+24,61&nbsp;ms je ono što jezgro može samo, 27,07&nbsp;ms je ono što sistem stvarno radi.</p>
 
 <p class="noind"><b>Terminologija.</b> Pod <i>latencijom</i> se podrazumeva broj taktova
 od postavljanja signala <span class="mono">start</span> do signala
 <span class="mono">done</span> za jedan poziv jezgra; pod <i>propusnošću</i> količina
 posla po jedinici vremena, ovde izražena brojem obrađenih pozicija prozora u sekundi.
 Pošto jezgro obrađuje jedan poziv u potpunosti pre nego što prihvati sledeći, ove dve
-veličine su uzajamno recipročne. Konkretno, propusnost = 5.016 pozicija&nbsp;/&nbsp;24,51&nbsp;ms
-&asymp; 204.600 pozicija/s (odnosno 1&nbsp;/&nbsp;4,89&nbsp;&micro;s), a takta po
-piksel-operaciji = 2.451.212&nbsp;/&nbsp;(5.016&nbsp;&middot;&nbsp;375) = 1,30.</p>
+veličine su uzajamno recipročne. Konkretno, pri 90,909&nbsp;MHz propusnost =
+5.016 pozicija&nbsp;/&nbsp;27,07&nbsp;ms &asymp; 185.300 pozicija/s (odnosno
+1&nbsp;/&nbsp;5,40&nbsp;&micro;s), a takta po piksel-operaciji =
+2.461.201&nbsp;/&nbsp;(5.016&nbsp;&middot;&nbsp;375) = 1,31.</p>
 
 <p>Izmerena latencija se dobro poklapa sa analitičkim modelom. Trošak po poziciji
 prozora iznosi:</p>
 
 <div class="formula">
-  T<sub>prozor</sub> = tmp_w &middot; tmp_h + 110 taktova
+  T<sub>prozor</sub> = tmp_w &middot; tmp_h + 112 taktova
 </div>
 
-<p class="noind">gde sabirak 110 čine: pet taktova za čitanje integralne slike,
-oko 19 taktova za deljenje pri računanju <span class="mono">f_bar</span>, dva takta
-za punjenje i pražnjenje protočne strukture, oko 83 takta za 83-bitno deljenje i
-jedan takt za upis rezultata. Za šablon 25&times;15 to je 485 taktova po prozoru,
-odnosno 2.432.760 taktova za svih 5.016 pozicija. Uz fazu A (16.200) i fazu B (769),
-model predviđa 2.449.729 taktova, dok je izmereno 2.451.212 &mdash; odstupanje je
-1.483 takta, odnosno <b>0,06&nbsp;%</b>. Model se, dakle, može koristiti za
+<p class="noind">gde sabirak 112 čine: pet taktova za čitanje integralne slike,
+oko 19 taktova za deljenje pri računanju <span class="mono">f_bar</span>, <b>tri</b> takta
+za punjenje i pražnjenje protočne strukture
+(<span class="mono">FILL</span>, <span class="mono">DRAIN</span>,
+<span class="mono">DRAIN2</span>), <b>jedan</b> takt za registrovanje
+<span class="mono">num_sq</span> i <span class="mono">den_prod</span> u stanju
+<span class="mono">S_NCC_SQ</span>, oko 83 takta za 83-bitno deljenje i
+jedan takt za upis rezultata. Poslednja dva sabirka su posledica preseka iz Koraka 8b
+(odeljak 10.5); pre njega je sabirak bio 110. Za šablon 25&times;15 to je 487 taktova po
+prozoru, odnosno 2.442.792 takta za svih 5.016 pozicija. Uz fazu A (16.200) i fazu B
+(769), model predviđa 2.459.761 takt, dok je izmereno 2.461.201 &mdash; odstupanje je
+1.440 taktova, odnosno <b>0,06&nbsp;%</b>. Model se, dakle, može koristiti za
 predviđanje latencije pri drugim veličinama segmenta i šablona.</p>
 
 <p>Ukupna latencija je zbir tri člana:</p>
@@ -1446,9 +1505,9 @@ predviđanje latencije pri drugim veličinama segmenta i šablona.</p>
   <tbody>
     <tr><td>A &mdash; učitavanje slike i izgradnja SAT</td><td class="mono">2·img_w·img_h = 2·90·90</td><td class="n">16.200</td><td class="n">0,7 %</td></tr>
     <tr><td>B &mdash; učitavanje šablona i njegova srednja vrednost</td><td class="mono">2·N + 19  (N = 375)</td><td class="n">769</td><td class="n">&lt; 0,1 %</td></tr>
-    <tr><td>C, D, E &mdash; glavna petlja</td><td class="mono">res_w·res_h·(N+110) = 66·76·485</td><td class="n">2.432.760</td><td class="n">99,2 %</td></tr>
-    <tr><td>ostatak (prelazi <span class="mono">S_L_V</span>, zaokruženja modela)</td><td>&mdash;</td><td class="n">1.483</td><td class="n">0,1 %</td></tr>
-    <tr><td><b>Ukupno (izmereno)</b></td><td>&mdash;</td><td class="n"><b>2.451.212</b></td><td class="n">100 %</td></tr>
+    <tr><td>C, D, E &mdash; glavna petlja</td><td class="mono">res_w·res_h·(N+112) = 66·76·487</td><td class="n">2.442.792</td><td class="n">99,3 %</td></tr>
+    <tr><td>ostatak (prelazi <span class="mono">S_L_V</span>, zaokruženja modela)</td><td>&mdash;</td><td class="n">1.440</td><td class="n">0,1 %</td></tr>
+    <tr><td><b>Ukupno (izmereno)</b></td><td>&mdash;</td><td class="n"><b>2.461.201</b></td><td class="n">100 %</td></tr>
   </tbody>
 </table>
 
@@ -1458,10 +1517,16 @@ iznad, koji za realne veličine šablona nosi 77&nbsp;% troška po prozoru.</p>
 
 <h2>7.5. Funkcionalna verifikacija</h2>
 
-<p>Ispravnost je proverena na dva nivoa, oba poređenjem sa referentnim vrednostima
-iz validiranog modela u jeziku C (Korak 1), koji je nezavisno proveren nad celom
-tablom &mdash; 32 od 32 figure ispravno prepoznate, uz FEN notaciju identičnu
-zvaničnoj.</p>
+<p>Ispravnost je proverena na <b>dva nivoa</b> &mdash; nad golim jezgrom i nad
+spakovanim IP-om kroz AXI &mdash; a svi testovi porede rezultat sa referentnim
+vrednostima iz validiranog modela u jeziku C (Korak 1), koji je nezavisno proveren nad
+celom tablom: 32 od 32 figure ispravno prepoznate, uz FEN notaciju identičnu zvaničnoj.</p>
+
+<p>Poređenje između nivoa je samo po sebi rezultat: IP daje <b>bit-identičan</b> izlaz
+kao golo jezgro, što znači da AXI omotač ne unosi nikakvu izmenu u obradu. Isti pik
+<span class="mono">0x80000000</span> pojavljuje se na linearnom indeksu 956, a to je
+tačno pozicija (u&nbsp;=&nbsp;32, v&nbsp;=&nbsp;14) jer je
+14&nbsp;&middot;&nbsp;66&nbsp;+&nbsp;32&nbsp;=&nbsp;956.</p>
 
 <table>
   <caption><b>Tabela 13.</b> Rezultati funkcionalne verifikacije</caption>
@@ -1477,8 +1542,27 @@ zvaničnoj.</p>
         <td>stvarni segment 90&times;90 (polje a8) i šablon crnog topa 25&times;15</td>
         <td>maksimum 0x80000000 na poziciji (u = 32, v = 14)</td>
         <td class="c ok">prolazi<br>(0x80000000 @ 32,14)</td></tr>
+    <tr><td><code>ncc_accel_tb</code></td>
+        <td>isti stvarni podaci, ali upisani i pročitani <b>kroz AXI</b> (Lite za registre,
+            Full za memorije)</td>
+        <td>isti maksimum, na linearnom indeksu 956 &mdash; dokaz da je omotač transparentan</td>
+        <td class="c ok">prolazi<br>(0x80000000 @ idx 956)</td></tr>
+    <tr><td><code>ncc_accel_burst_tb</code></td>
+        <td>AXI burst dužine 8 (<span class="mono">awlen</span>/<span class="mono">arlen</span> = 7),
+            provera <span class="mono">WSTRB</span> i ranog <span class="mono">AW</span></td>
+        <td>svih 8 beat-ova ispravno u oba smera; upis sa isključenim bajt-lane-om ne menja piksel</td>
+        <td class="c ok">prolazi<br>(8 / 8 čitanje i upis)</td></tr>
   </tbody>
 </table>
+
+<p class="noind"><b>Zašto postoji poseban test za burst-ove.</b> Prvi integracioni
+testbench koristio je isključivo pojedinačne transfere
+(<span class="mono">len</span>&nbsp;=&nbsp;0), pa je jedan defekt u generisanom AXI
+kontroleru ostao neotkriven: pri čitanju burst-om vraćala se <i>prethodna</i> reč na
+svakom beat-u posle prvog. Procesor taj put nikad ne pogodi, jer su
+<span class="mono">Xil_In32</span>/<span class="mono">Xil_Out32</span> pojedinačni
+transferi &mdash; ali svaki DMA prenos ga pogodi. Test je zato napisan tako da
+<b>prvo padne</b> nad starom logikom, pa prođe nad ispravljenom.</p>
 
 <p>Sintetički test je namerno konstruisan tako da šablon bude tačno ugrađen u sliku
 na poziciji (1,&nbsp;1): time se u istom testu pokrivaju i tačna nula i tačan maksimum
@@ -1492,19 +1576,23 @@ polju koje u zvaničnoj FEN notaciji zaista sadrži crnog topa.</p>
 <!-- ============================ 8. ZAKLJUČAK ============================ -->
 <h1>8. Zaključak</h1>
 
-<p>RT model NCC jezgra je opisan u VHDL-u, funkcionalno verifikovan i sintetizovan
-za ciljni uređaj <span class="mono">xc7z010-clg225-2</span>. Ključni rezultati:</p>
+<p>RT model NCC jezgra je opisan u VHDL-u, funkcionalno verifikovan, sintetizovan i
+implementiran za ciljni uređaj <span class="mono">xc7z010clg400-1</span>. Ključni
+rezultati:</p>
 
 <ul class="plain">
   <li>rezultat je <b>bit-identičan</b> referentnom modelu u jeziku C, na sintetičkom
-      i na stvarnim podacima (odeljak 7.5);</li>
-  <li>dizajn <b>zatvara vremenska ograničenja</b> pri 100 MHz, sa rezervom od
-      1,179 ns i ostvarivom frekvencijom od približno 113 MHz (odeljak 7.3);</li>
-  <li>zauzeće resursa (8,67&nbsp;% LUT, 11,25&nbsp;% DSP, 15&nbsp;% blok-memorije)
+      i na stvarnim podacima, i ostaje bit-identičan i kroz AXI omotač (odeljak 7.5);</li>
+  <li>samostalno jezgro <b>zatvara vremenska ograničenja</b> i pri 100 MHz, sa rezervom
+      od 0,146 ns posle rutiranja i ostvarivom frekvencijom od približno 101,5 MHz
+      (odeljak 7.3);</li>
+  <li>zauzeće resursa golog jezgra (8,36&nbsp;% LUT, 11,25&nbsp;% DSP,
+      15&nbsp;% blok-memorije, <b>0</b> LUT-ova kao memorija)
       ostavlja dovoljno prostora za drugu instancu jezgra i za AXI infrastrukturu,
       što je preduslov za paralelizaciju predviđenu sistemskim modelom (odeljak 7.2);</li>
-  <li>propusnost iznosi približno 204.600 pozicija prozora u sekundi pri taktu od
-      100 MHz, odnosno 1,30 takta po piksel-operaciji (odeljak 7.4).</li>
+  <li>latencija po pozivu iznosi 2.461.201 takt, odnosno 1,31 takta po
+      piksel-operaciji; pri taktu integrisanog sistema od 90,909 MHz to je 27,07 ms i
+      približno 185.300 pozicija prozora u sekundi (odeljak 7.4).</li>
 </ul>
 
 <p>Time su ispunjeni svi uslovi da se jezgro spakuje u IP sa AXI interfejsom i
