@@ -1049,8 +1049,11 @@ najgora posle rutiranja, pa je presečena registrom.</p>
     <tr><td><span class="mono">p</span> &mdash; linearni indeks šablona</td><td class="c">10</td><td>B</td></tr>
     <tr><td><span class="mono">row_sum</span>, <span class="mono">sum_t</span>, <span class="mono">sum_f_partial</span></td><td class="c">32</td><td>A, B, C</td></tr>
     <tr><td><span class="mono">template_mean</span>, <span class="mono">f_bar</span></td><td class="c">8</td><td>B, C</td></tr>
+    <tr><td><span class="mono">df_reg</span>, <span class="mono">dt_reg</span> &mdash; registrovane razlike piksel&ndash;sredina (MAC stepen 1, Korak 8b)</td><td class="c">9</td><td>D</td></tr>
+    <tr><td><span class="mono">mac_v_reg</span> &mdash; validnost stepena 1 (gejtuje akumulaciju u taktu punjenja)</td><td class="c">1</td><td>D</td></tr>
     <tr><td><span class="mono">sum_num</span> (označen)</td><td class="c">27</td><td>D (akumulator)</td></tr>
     <tr><td><span class="mono">sum_den_f</span>, <span class="mono">sum_den_t</span></td><td class="c">26</td><td>D (akumulatori)</td></tr>
+    <tr><td><span class="mono">num_sq_reg</span>, <span class="mono">den_prod_reg</span> &mdash; registrovani ulazi 83-bitnog delioca (Korak 8b)</td><td class="c">52</td><td>E</td></tr>
     <tr><td><span class="mono">result_q</span></td><td class="c">32</td><td>E</td></tr>
     <tr><td><span class="mono">busy</span>, <span class="mono">done</span></td><td class="c">1</td><td>S_IDLE, S_DONE</td></tr>
   </tbody>
@@ -1059,12 +1062,19 @@ najgora posle rutiranja, pa je presečena registrom.</p>
 <h2>6.2. Funkcionalne jedinice</h2>
 
 <p>Datapath sadrži tri paralelna množača u unutrašnjoj petlji
-(<span class="mono">diff_f &middot; diff_t</span>, <span class="mono">diff_f<sup>2</sup></span>,
-<span class="mono">diff_t<sup>2</sup></span>), koji se preslikavaju u DSP48E1 blokove,
+(<span class="mono">df_reg &middot; dt_reg</span>, <span class="mono">df_reg<sup>2</sup></span>,
+<span class="mono">dt_reg<sup>2</sup></span>), koji se preslikavaju u DSP48E1 blokove,
 kao i dva množača van petlje (kvadriranje brojioca i proizvod imenilaca). Deljenje
 resursa nije primenjeno na tri množača unutrašnje petlje: pošto se ta petlja izvršava
 milionima puta, serijalizacija bi utrostručila najskuplji deo obrade radi uštede od
 svega nekoliko DSP blokova, kojih ionako ima dovoljno (odeljak 7.2).</p>
+
+<p>Pet registara iz tabele iznad (<span class="mono">df_reg</span>,
+<span class="mono">dt_reg</span>, <span class="mono">mac_v_reg</span>,
+<span class="mono">num_sq_reg</span>, <span class="mono">den_prod_reg</span>) nisu deo
+prvobitnog dizajna &mdash; uvedeni su u Koraku 8b isključivo radi zatvaranja vremenskih
+uslova, bez ikakve promene izlaza. Njihova cena je <b>+0,41 %</b> latencije i
+<b>+110 flip-flopova</b>, a dobitak <b>2,59 ns</b> vremenske rezerve (odeljak 10.5).</p>
 
 <h2>6.3. Sekvencijalni delilac</h2>
 
@@ -1186,23 +1196,23 @@ generiše impuls <span class="mono">start</span>, zatim čeka signal
   <!-- oduzimaci -->
   <rect class="fu" x="164" y="60" width="86" height="30" rx="3"/>
   <text class="tb" x="207" y="75">oduzimač</text>
-  <text class="sm" x="207" y="85">diff_f = px − f_bar</text>
+  <text class="sm" x="207" y="85">df_reg = px − f_bar</text>
   <path class="w" d="M128,77 L162,77"/>
   <path class="c" d="M286,139 L262,139 L262,84 L252,84"/>
 
   <rect class="fu" x="164" y="106" width="86" height="30" rx="3"/>
   <text class="tb" x="207" y="121">oduzimač</text>
-  <text class="sm" x="207" y="131">diff_t = t − t_mean</text>
+  <text class="sm" x="207" y="131">dt_reg = t − t_mean</text>
   <path class="w" d="M128,123 L162,123"/>
   <path class="c" d="M286,99 L268,99 L268,116 L252,116"/>
 
   <!-- mnozaci -->
   <rect class="fu" x="164" y="258" width="86" height="28" rx="3"/>
-  <text class="tb" x="207" y="276">× diff_f · diff_t</text>
+  <text class="tb" x="207" y="276">× df_reg · dt_reg</text>
   <rect class="fu" x="164" y="294" width="86" height="28" rx="3"/>
-  <text class="tb" x="207" y="312">× diff_f²</text>
+  <text class="tb" x="207" y="312">× df_reg²</text>
   <rect class="fu" x="164" y="330" width="86" height="28" rx="3"/>
-  <text class="tb" x="207" y="348">× diff_t²</text>
+  <text class="tb" x="207" y="348">× dt_reg²</text>
   <text class="sm" x="207" y="370">3 × DSP48E1, paralelno</text>
 
   <path class="w" d="M207,90 L207,110"/>
@@ -1253,7 +1263,7 @@ generiše impuls <span class="mono">start</span>, zatim čeka signal
   <!-- controlpath -->
   <rect class="bx" x="556" y="96" width="118" height="34" rx="3"/>
   <text class="tb" x="615" y="112">registar stanja</text>
-  <text class="sm" x="615" y="124">state_reg (21 stanje)</text>
+  <text class="sm" x="615" y="124">state_reg (23 stanja)</text>
 
   <rect class="bx" x="556" y="164" width="118" height="42" rx="3"/>
   <text class="tb" x="615" y="180">logika narednog</text>
@@ -1295,6 +1305,12 @@ prema datapath-u šalje upravljačke signale (izbor operanada, dozvole upisa,
 impulse za pokretanje delilaca), a od njega prima statusne signale (završetak
 deljenja, nulta varijansa, kraj petlji). Datapath ne sadrži nikakvu odluku o toku
 izvršavanja.</p>
+
+<p>Radi preglednosti, slika ne iscrtava zasebne blokove za pet protočnih registara iz
+Koraka 8b (<span class="mono">df_reg</span>/<span class="mono">dt_reg</span>/<span class="mono">mac_v_reg</span>
+između oduzimača i množača, <span class="mono">num_sq_reg</span>/<span class="mono">den_prod_reg</span>
+između kvadriranja i delioca) &mdash; oni takt-granicu unose unutar prikazanih putanja, bez
+promene redosleda blokova ni toka podataka (Tabela 6, §6.2).</p>
 
 <!-- ============================ 7. SINTEZA ============================ -->
 <h1>7. Analiza posle sinteze</h1>
