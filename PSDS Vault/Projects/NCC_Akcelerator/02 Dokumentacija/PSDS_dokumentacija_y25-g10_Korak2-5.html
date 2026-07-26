@@ -896,18 +896,19 @@ prethodnoj. U petom stanju se, uz poslednji sabirak, pokreće delilac za
 <span class="mono">tmp_w &middot; tmp_h</span> puta po svakoj poziciji prozora, dakle
 preko 3,3 miliona puta po pozivu za pun segment. Naivna realizacija bi po pikselu
 trošila dva takta (jedan za adresu, jedan za podatak). Umesto toga, faza je
-organizovana protočno: u stanju <span class="mono">S_L_YX_RUN</span> se
-<b>istovremeno</b> akumulira podatak piksela <i>N</i> i izdaje adresa piksela
-<i>N&nbsp;+&nbsp;1</i>. Stanje <span class="mono">S_L_YX_FILL</span> puni protočnu
-strukturu (izdaje prvu adresu bez akumulacije), a
-<span class="mono">S_L_YX_DRAIN</span> i
-<span class="mono">S_L_YX_DRAIN2</span> je prazne. Od Koraka 8b protočna struktura ima
-<b>tri stepena</b>: izdavanje adrese, registrovanje razlika
-<span class="mono">df</span>/<span class="mono">dt</span>, pa množenje i akumulacija.
-Presek je uveden da bi se putanja BRAM &rarr; oduzimanje &rarr; množenje &rarr;
-akumulator razdvojila na dva takta; sam je doneo <b>2,43 ns</b> vremenske rezerve
-(odeljak 10.5). Cena je i dalje <b>jedan takt po pikselu</b>, uz <b>dva</b> takta
-režije po prozoru umesto jednog. Slika 2 prikazuje preklapanje.</p>
+organizovana protočno, u <b>tri stepena</b>: u stanju <span class="mono">S_L_YX_RUN</span>
+se <b>istovremeno</b> izdaje adresa piksela <i>k&nbsp;+&nbsp;2</i>,
+registruju razlike <span class="mono">df</span>/<span class="mono">dt</span> piksela
+<i>k&nbsp;+&nbsp;1</i>, i akumulira već registrovani par piksela <i>k</i> (u
+<span class="mono">sum_num</span>, <span class="mono">sum_den_f</span>,
+<span class="mono">sum_den_t</span>). Stanje <span class="mono">S_L_YX_FILL</span> puni
+protočnu strukturu (izdaje samo prvu adresu, bez registrovanja i akumulacije), a
+<span class="mono">S_L_YX_DRAIN</span> i <span class="mono">S_L_YX_DRAIN2</span> su
+prazna za izdavanje adrese &mdash; samo dovršavaju registrovanje i akumulaciju piksela
+koji su već učitani. Presek je uveden da bi se putanja BRAM &rarr; oduzimanje &rarr;
+množenje &rarr; akumulator razdvojila na dva takta; sam je doneo <b>2,43 ns</b>
+vremenske rezerve (odeljak 10.5). Cena je i dalje <b>jedan takt po pikselu</b>, uz
+<b>dva</b> takta režije po prozoru umesto jednog. Slika 2 prikazuje preklapanje.</p>
 
 <figure>
 <svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
@@ -1009,7 +1010,9 @@ režije po prozoru umesto jednog. Slika 2 prikazuje preklapanje.</p>
   <text class="st2" x="104" y="204">Ukupno: N + 2 takta za N piksela (jedan takt po pikselu + dva takta režije).</text>
   <text class="st2" x="104" y="220">Bez protočnosti bi bilo 2N taktova — ušteda blizu 50 % ukupne latencije jezgra.</text>
 </svg>
-<figcaption><b>Slika 2.</b> Preklapanje izdavanja adrese i akumulacije u pipeline-ovanoj unutrašnjoj petlji</figcaption>
+<figcaption><b>Slika 2.</b> Trostepena protočnost unutrašnje petlje: preklapanje izdavanja
+adrese, registrovanja razlika <span class="mono">df</span>/<span class="mono">dt</span>
+i akumulacije</figcaption>
 </figure>
 
 <h2>5.6. Faza E: normalizacija i upis rezultata</h2>
