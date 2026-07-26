@@ -1798,9 +1798,10 @@ lažne putanje.</p>
   <path class="w" d="M540,256 L540,300 L322,300 L322,272"/>
   <text class="s" x="430" y="312" text-anchor="middle">M_AXI &rarr; S01 (drugi master)</text>
 
-  <!-- interkonekt M05 -> PS S_AXI_HP0 (DDR).
-       Vertikala je na x=200, DESNO od proc_sys_reset-a (koji se zavrsava na x=170) --
-       inace strelica prolazi kroz tu kutiju. Ulazi u PS na liniji porta S_AXI_HP0. -->
+  <!-- interkonekt M05 do PS S_AXI_HP0 (DDR).
+       Vertikala je na x=200, DESNO od proc_sys_reset-a (koji se zavrsava na x=170),
+       jer inace strelica prolazi kroz tu kutiju. Ulazi u PS na liniji porta S_AXI_HP0.
+       NAPOMENA: dvostruka crtica je u XML komentaru zabranjena i obara svgcheck.py. -->
   <path class="w" d="M284,272 L284,344 L200,344 L200,101 L170,101"/>
   <text class="s" x="300" y="358" text-anchor="middle">M05 &rarr; S_AXI_HP0 (DDR)</text>
 
@@ -1810,6 +1811,17 @@ lažne putanje.</p>
 <figcaption><b>Slika 4.</b> Topologija integrisanog sistema <span class="mono">ncc_system</span>:
 Zynq PS, dve instance akceleratora, DMA memorija&ndash;memorija i jedan AXI interkonekt</figcaption>
 </figure>
+
+<p class="noind"><b>Podešavanja DMA kontrolera.</b> Kontroler radi u <b>prostom režimu</b>,
+bez raspršenog prikupljanja (<i>scatter-gather</i>): svaki prenos se programira upisom
+izvorne adrese, odredišne adrese i dužine, i pokreće pojedinačno. Lista deskriptora bila
+bi korisna kad bi se nizalo mnogo malih prenosa, a ovde ih je po polju table svega
+nekoliko, i to velikih. Isključeno je i poravnavanje podataka
+(<i>data realignment</i>), jer su svi pristupi poravnati na četiri bajta &mdash; jedan
+piksel po reči (odeljak 8.3). Širina podataka je 32 bita, kao i sve ostalo u sistemu, a
+najveća dužina bursta je 256 prenosa, dakle 1&nbsp;KB &mdash; ispod granice od 4&nbsp;KB
+koju AXI postavlja za jedan burst, i dovoljno malo da nijedan burst ne pređe iz jednog
+regiona memorije u drugi.</p>
 
 <p class="noind"><b>Zašto jedan interkonekt, a ne dva.</b> AXI slave interfejs može biti
 povezan na <b>samo jedan</b> interkonekt. Pošto memorijskom interfejsu
@@ -1863,11 +1875,35 @@ mu ne trebaju &mdash; sužavanjem njegove mape smanjuje se šansa da pogrešno p
 prenos upiše nešto u registre. Procesor <b>ne vidi</b> DDR kroz programabilnu logiku, jer
 mu do sopstvene memorije vodi direktan put kroz procesorski sistem.</p>
 
-<p class="noind">Tri bazne adrese &mdash; <span class="mono">0x5000_0000</span>,
-<span class="mono">0x5100_0000</span> i <span class="mono">0x6000_0000</span> &mdash; su
-<b>identične</b> konstantama iz sistemskog modela prethodne faze. Opseg od 4&nbsp;KB za
-kontrolne registre je najmanji koji alat dopušta za AXI segment; blok dekodira samo donjih
-šest bita, pa se registri unutar tog prozora ponavljaju, što je bezopasno.</p>
+<p>Mapa je namerno usklađena sa konstantama sistemskog modela iz prethodne faze projekta,
+da softver ne mora da menja adrese.</p>
+
+<table>
+  <caption><b>Tabela 18.</b> Poklapanje sa konstantama sistemskog modela</caption>
+  <thead>
+    <tr><th>Konstanta modela</th><th class="mono">Vrednost</th><th>Preslikavanje u hardveru</th></tr>
+  </thead>
+  <tbody>
+    <tr><td class="mono">ADDR_NCC</td><td class="mono">0x5000_0000</td>
+        <td><span class="mono">ncc0.S00_AXI</span> &mdash; <b>identično</b></td></tr>
+    <tr><td class="mono">ADDR_NCC1</td><td class="mono">0x5100_0000</td>
+        <td><span class="mono">ncc1.S00_AXI</span> &mdash; <b>identično</b></td></tr>
+    <tr><td class="mono">ADDR_DMA</td><td class="mono">0x6000_0000</td>
+        <td><span class="mono">axi_cdma_0.S_AXI_LITE</span> &mdash; <b>identično</b></td></tr>
+    <tr><td class="mono">ADDR_BRAM</td><td class="mono">0x4000_0000</td>
+        <td><b>ne postoji</b> &mdash; nema deljene memorije (odeljak 8.1)</td></tr>
+    <tr><td class="mono">ADDR_RESULTS</td><td class="mono">0x40</td>
+        <td>postaje <span class="mono">S01 + 0x10000</span>, dakle drugi interfejs</td></tr>
+    <tr><td class="mono">REG_IMG_ADDR</td><td class="mono">0x10</td>
+        <td><i>rezervisan</i> &mdash; bez značenja u slave obrascu</td></tr>
+    <tr><td class="mono">REG_TMP_ADDR</td><td class="mono">0x14</td>
+        <td><i>rezervisan</i></td></tr>
+  </tbody>
+</table>
+
+<p class="noind">Opseg od 4&nbsp;KB za kontrolne registre je najmanji koji alat dopušta za
+AXI segment; blok dekodira samo donjih šest bita, pa se registri unutar tog prozora
+ponavljaju, što je bezopasno.</p>
 
 <h2>9.3. Tok podataka po jednom polju table</h2>
 
