@@ -599,13 +599,15 @@ treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash;
         <td>pipeline-ovana akumulacija tri sume nad pikselima šablona</td></tr>
     <tr><td><b>D</b></td><td><span class="mono">S_L_YX_DRAIN2</span></td>
         <td class="c">1</td>
-        <td>Akumulira poslednji registrovani par <span class="mono">df_reg&middot;dt_reg</span>;
-        poništava <span class="mono">mac_v</span>. Dodato u Koraku 8b uz MAC protočnost.</td></tr>
+        <td>Akumulira poslednji registrovani par u sve tri sume
+        (<span class="mono">sum_num</span>, <span class="mono">sum_den_f</span>,
+        <span class="mono">sum_den_t</span>); poništava <span class="mono">mac_v</span>.
+        Dodato u Koraku 8b uz MAC protočnost.</td></tr>
     <tr><td><b>E</b></td><td><span class="mono">S_NCC_SQ</span></td>
         <td class="c">1</td>
         <td>Provera <span class="mono">den = 0</span>; ako nije, registruje
         <span class="mono">num_sq &lt;= sum_num<sup>2</sup></span> i
-        <span class="mono">den_prod &lt;= den_f &middot; den_t</span>. Dodato u Koraku 8b da kvadriranje
+        <span class="mono">den_prod &lt;= sum_den_f &middot; sum_den_t</span>. Dodato u Koraku 8b da kvadriranje
         ne ulazi kombinaciono u 83-bitni delilac.</td></tr>
     <tr><td><b>E</b></td><td><span class="mono">S_NCC_DIV</span>, <span class="mono">S_NCC_WAIT</span>,<br><span class="mono">S_WRITE_RESULT</span></td>
         <td class="c">~84 po prozoru</td>
