@@ -575,7 +575,7 @@ dvoprocesnom stilu: jedan proces sadrži isključivo registre
 logiku, sa podrazumevanim dodelama na početku i grananjem po
 <span class="mono">case state_reg</span>. Memorija integralne slike izdvojena je u
 treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash; svih
-21 &mdash; nabrojana u Tabeli 5 i prikazana na ASMD dijagramu (Slika 1).</p>
+23 &mdash; nabrojana u Tabeli 5 i prikazana na ASMD dijagramu (Slika 1).</p>
 
 <table>
   <caption><b>Tabela 5.</b> Svih 23 stanja kontrolne jedinice, grupisano po fazama</caption>
@@ -969,14 +969,17 @@ režije po prozoru. Slika 2 prikazuje preklapanje.</p>
 
 <h2>5.6. Faza E: normalizacija i upis rezultata</h2>
 
-<p>U stanju <span class="mono">S_NCC_DIV</span> se najpre proverava degenerisani
+<p>U stanju <span class="mono">S_NCC_SQ</span> se najpre proverava degenerisani
 slučaj: ako je bilo koja od suma kvadrata jednaka nuli, rezultat je 0 i deljenje se
-preskače. Inače se kombinaciono računaju <span class="mono">num_sq = sum_num<sup>2</sup></span>
-i <span class="mono">den_prod = sum_den_f &middot; sum_den_t</span>, deljenik se pomera
-za 31 mesto ulevo i pokreće se 83-bitni delilac. Stanje
+preskače. Inače se registruju <span class="mono">num_sq &lt;= sum_num<sup>2</sup></span>
+i <span class="mono">den_prod &lt;= sum_den_f &middot; sum_den_t</span>. Stanje
+<span class="mono">S_NCC_DIV</span> pomera tako registrovan deljenik za 31 mesto
+ulevo i pokreće 83-bitni delilac nad registrovanim vrednostima. Stanje
 <span class="mono">S_NCC_WAIT</span> čeka njegov signal završetka, a
 <span class="mono">S_WRITE_RESULT</span> upisuje rezultat u mapu i pomera brojače
-prozora.</p>
+prozora. Kvadriranje je razdvojeno od pokretanja delioca u dva takta u Koraku 8b:
+putanja od kvadriranja <span class="mono">sum_num</span> do 83-bitnog delioca bila je
+najgora posle rutiranja, pa je presečena registrom.</p>
 
 <!-- ============================ 6. DATAPATH ============================ -->
 <h1>6. Datapath i controlpath</h1>
