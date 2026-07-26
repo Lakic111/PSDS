@@ -118,7 +118,8 @@
 
   <div class="rule"></div>
   <div class="title">Hardverski akcelerator za prepoznavanje šahovskih figura zasnovan na normalizovanoj unakrsnoj korelaciji</div>
-  <div class="sub">RT model, ASMD dijagram i analiza posle sinteze</div>
+  <div class="sub">Od algoritma do implementiranog sistema:<br>
+  RT model, ASMD dijagram, pakovanje u IP jezgro i analiza integrisanog sistema</div>
   <div class="rule"></div>
 
   <div class="meta">
@@ -169,14 +170,35 @@
   <li class="l2">6.4. Memorije</li>
   <li class="l2">6.5. Blok dijagram</li>
 
-  <li class="l1">7. Analiza posle sinteze</li>
+  <li class="l1">7. Analiza posle sinteze i implementacije</li>
   <li class="l2">7.1. Metod</li>
   <li class="l2">7.2. Utrošeni resursi</li>
   <li class="l2">7.3. Kritična putanja i maksimalna frekvencija</li>
   <li class="l2">7.4. Latencija i propusnost</li>
   <li class="l2">7.5. Funkcionalna verifikacija</li>
 
-  <li class="l1">8. Zaključak</li>
+  <li class="l1">8. Pakovanje u IP jezgro</li>
+  <li class="l2">8.1. Izbor obrasca: slave sa internim memorijama</li>
+  <li class="l2">8.2. Dva AXI interfejsa</li>
+  <li class="l2">8.3. Regioni unutar memorijskog interfejsa</li>
+  <li class="l2">8.4. Kontrolni i statusni registri</li>
+
+  <li class="l1">9. Integracija u sistem</li>
+  <li class="l2">9.1. Topologija</li>
+  <li class="l2">9.2. Adresna mapa</li>
+  <li class="l2">9.3. Tok podataka po jednom polju table</li>
+  <li class="l2">9.4. Dva pravila koja softver mora poštovati</li>
+  <li class="l2">9.5. Zašto DMA, iako nije performansni dobitak</li>
+
+  <li class="l1">10. Analiza integrisanog sistema</li>
+  <li class="l2">10.1. Metod</li>
+  <li class="l2">10.2. Utrošeni resursi</li>
+  <li class="l2">10.3. Vremenska analiza i radni takt</li>
+  <li class="l2">10.4. Propusnost sistema</li>
+  <li class="l2">10.5. Put do zatvaranja vremenskih ograničenja</li>
+  <li class="l2">10.6. Poređenje sa referentnim rešenjem</li>
+
+  <li class="l1">11. Zaključak</li>
 </ul>
 </div>
 
@@ -193,6 +215,18 @@ figura, a iz mape skorova se rekonstruiše pozicija u standardnoj Forsyth-Edward
 (FEN) notaciji. Korelacija je, prema profilisanju izvršne specifikacije, uzročnik
 preko 70&nbsp;% procesorskog vremena i time prirodan kandidat za akceleraciju u
 programabilnoj logici.</p>
+
+<p class="noind"><b>Obim dokumenta.</b> Dokument prati put od algoritma do implementiranog
+sistema, u tri celine. Prva (poglavlja 2&ndash;6) opisuje <b>algoritam i RT model</b>:
+matematičku osnovu i tri optimizacije, uklanjanje petlji, interfejs, dijagram algoritamske
+mašine stanja i podelu na datapath i controlpath. Druga (poglavlje 7) daje <b>analizu
+samostalnog jezgra</b> posle sinteze i implementacije. Treća (poglavlja 8&ndash;10) opisuje
+<b>put do sistema na ploči</b>: pakovanje jezgra u IP blok sa AXI interfejsom, integraciju
+sa procesorskim sistemom i DMA kontrolerom, i analizu celog integrisanog dizajna.</p>
+
+<p class="noind">Sve navedene brojke su izmerene, a ne procenjene, i mogu se
+reprodukovati skriptama iz repozitorijuma. Gde se merenje razlikuje od ranije objavljene
+vrednosti ili od referentnog rešenja, razlika je izričito navedena i obrazložena.</p>
 
 <h2>1.2. Polazna tačka: ESL model sistema</h2>
 
@@ -544,6 +578,24 @@ DMA kontroler na <span class="mono">0x6000_0000</span>. Mapa je od početka
 projektovana tako da odgovara rasporedu adresa opšte namene na Zynq platformi, pa se
 može preuzeti neizmenjena pri integraciji u blok dizajn.</p>
 
+<p class="noind">⚠️ <b>Tabela iznad opisuje izvršnu specifikaciju, ne konačnu
+realizaciju.</b> Tri bazne adrese jezgara i DMA kontrolera prenesene su
+<b>neizmenjene</b> (odeljak 9.2), ali dve stvari se razlikuju, jer je jezgro spakovano kao
+slave sa internim memorijama a ne kao master:</p>
+
+<ul class="plain">
+  <li>deljene memorije na <span class="mono">0x4000_0000</span> u realizaciji
+      <b>nema</b>, pa registri <span class="mono">REG_IMG_ADDR</span> i
+      <span class="mono">REG_TMP_ADDR</span> ostaju <b>rezervisani</b> &mdash; nema
+      adrese koju bi procesor javljao;</li>
+  <li><span class="mono">REG_STATUS</span> u realizaciji ima <b>dva odvojena bita</b>
+      (završeno, zauzeto) umesto jedne vrednosti, jer se stanja <i>još nije počelo</i> i
+      <i>u toku</i> inače ne mogu razlikovati.</li>
+</ul>
+
+<p class="noind">Stvarni registarski interfejs, sa obrazloženjem oba odstupanja, dat je u
+odeljku 8.4; puna adresna mapa sistema u odeljku 9.2.</p>
+
 <h2>4.3. Portovi RTL jezgra</h2>
 
 <p>Entitet <code>ncc_core</code> ima interfejs prikazan u Tabeli 4. Adresno-podatkovni
@@ -569,12 +621,25 @@ a podatak je validan u narednom.</p>
 
 <h2>4.4. Memorijsko okruženje</h2>
 
-<p>Segment slike i šablon nalaze se u deljenoj memoriji programabilne logike, kojoj
-pristupa više mastera: procesor (upis konfiguracije), DMA kontroler (prenos segmenta
-iz spoljne memorije) i oba NCC jezgra. Jezgro je, dakle, <b>jedan od mastera</b> na
-toj memoriji, a ne njen vlasnik. Integralna slika je izuzetak: ona je interna i
-privatna za jezgro, jer se u fazi izgradnje čita i piše u svakom taktu i ne bi
-tolerisala deljeni pristup.</p>
+<p>Jezgro ne poseduje memorije iz kojih čita: adresu izdaje, a podatak dobija u narednom
+taktu, kao kod svakog sinhronog memorijskog porta. Ono što se nalazi <i>sa druge strane</i>
+tog porta je pitanje okruženja, a ne jezgra &mdash; i upravo se to okruženje razlikuje
+između izvršne specifikacije i realizacije:</p>
+
+<ul class="plain">
+  <li><b>izvršna specifikacija</b> pretpostavlja <i>deljenu</i> memoriju programabilne
+      logike, kojoj pristupa više mastera: procesor, DMA kontroler i oba jezgra;</li>
+  <li><b>realizacija</b> koristi obrazac <i>slave sa internim memorijama</i>: memorije su
+      privatne za blok, dvoportne, i procesor ili DMA ih pune preko AXI interfejsa dok
+      jezgro stoji. Deljene memorije u sistemu <b>nema</b>.</li>
+</ul>
+
+<p class="noind">Za sam RT model to ne menja ništa &mdash; portovi jezgra su u oba slučaja
+identični, i zato je jezgro ušlo u IP blok nepromenjeno. Obrazloženje odluke i njene
+posledice na registarsku mapu su u odeljku 8.1.</p>
+
+<p>Integralna slika je u oba slučaja izuzetak: ona je interna i privatna za jezgro, jer se
+u fazi izgradnje čita i piše u svakom taktu i ne bi tolerisala deljeni pristup.</p>
 
 <!-- ============================ 5. ASMD ============================ -->
 <h1>5. ASMD dijagram</h1>
@@ -2099,7 +2164,8 @@ table u istom vremenu u kome bi jedna instanca obradila jedno.</p>
 
 <p>Prva verzija integrisanog sistema imala je vremensku rezervu od
 <b>&minus;3,299&nbsp;ns</b>, dakle nije ni blizu zatvarala. Do pozitivne rezerve se došlo
-u četiri koraka, navedena po veličini doprinosa.</p>
+kroz <b>pet</b> mera, navedenih po veličini doprinosa. Prve tri su popravile vreme, a
+poslednje dve površinu &mdash; razlika koja je objašnjena posle tabele.</p>
 
 <table>
   <caption><b>Tabela 23.</b> Mere kojima su zatvorena vremenska ograničenja</caption>
@@ -2202,8 +2268,36 @@ rezultati:</p>
       približno 185.300 pozicija prozora u sekundi (odeljak 7.4).</li>
 </ul>
 
-<p>Time su ispunjeni svi uslovi da se jezgro spakuje u IP sa AXI interfejsom i
-integriše u sistem na programabilnoj logici.</p>
+<p>Jezgro je zatim spakovano u IP blok sa dva AXI interfejsa i integrisano u sistem sa
+procesorskim sistemom Zynq, drugom instancom akceleratora i DMA kontrolerom. Rezultati na
+nivou celog sistema:</p>
+
+<ul class="plain">
+  <li>izlaz kroz AXI omotač je <b>bit-identičan</b> golom jezgru, čime je verifikacija iz
+      poglavlja 7 prenesena na spakovan blok bez ponovnog dokazivanja (odeljak 7.5);</li>
+  <li>ceo sistem zauzima <b>35,6&nbsp;% LUT-ova</b> uređaja &mdash; <b>manje nego što
+      referentno rešenje troši samo na svoja dva jezgra</b> (59,9&nbsp;%) &mdash; i po
+      instanci 1.910 naspram 5.269 LUT, odnosno 9 naspram 16 DSP blokova
+      (odeljci 10.2 i 10.6);</li>
+  <li>sistem <b>zatvara vremenska ograničenja</b> na 90,909 MHz, sa rezervom od
+      +0,170 ns i bez ijedne od 15.459 krajnjih tačaka koja krši ograničenje
+      (odeljak 10.3);</li>
+  <li>na istom zadatku sistem troši <b>2,74&times; manje taktova</b> od referentnog
+      rešenja: 3.783.652 naspram 10.360.183 (odeljak 10.6).</li>
+</ul>
+
+<p class="noind"><b>Dve slabosti se navode otvoreno.</b> Prva je blok-memorija: 65&nbsp;%
+zauzeća, i to je jedini resurs bez rezerve, a po njemu smo slabiji od referentnog rešenja.
+Uzrok je 32-bitna reč integralne slike kod koje je dovoljno 21 bit; suženje bi oslobodilo
+oko šest blokova (odeljak 10.2). Druga je radni takt: 90,909&nbsp;MHz umesto nominalnih
+100, dakle odstupanje od 9,1&nbsp;%. Pri tome samostalno jezgro 100&nbsp;MHz
+<i>zatvara</i> &mdash; ograničenje unosi integracija, kroz pritisak razmeštaja i zagušenje
+rutiranja, a ne RTL (odeljak 10.3).</p>
+
+<p>Preostaje generisanje konfiguracione datoteke i provera na realnoj ploči, uz softver
+prenesen iz izvršne specifikacije. Interfejs koji taj softver treba da koristi &mdash;
+adresna mapa, registri, tok podataka i dva obavezna pravila &mdash; opisan je u
+poglavljima 8 i 9.</p>
 
 </body>
 </html>
