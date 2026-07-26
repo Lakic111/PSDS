@@ -569,7 +569,7 @@ tolerisala deljeni pristup.</p>
 
 <h2>5.1. Pregled stanja</h2>
 
-<p>Kontrolna jedinica je Murova mašina stanja sa <b>21 stanjem</b>, opisana u
+<p>Kontrolna jedinica je Murova mašina stanja sa <b>23 stanja</b>, opisana u
 dvoprocesnom stilu: jedan proces sadrži isključivo registre
 (<span class="mono">signal_reg &lt;= signal_next</span>), drugi svu kombinacionu
 logiku, sa podrazumevanim dodelama na početku i grananjem po
@@ -578,7 +578,7 @@ treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash;
 21 &mdash; nabrojana u Tabeli 5 i prikazana na ASMD dijagramu (Slika 1).</p>
 
 <table>
-  <caption><b>Tabela 5.</b> Svih 21 stanje kontrolne jedinice, grupisano po fazama</caption>
+  <caption><b>Tabela 5.</b> Svih 23 stanja kontrolne jedinice, grupisano po fazama</caption>
   <thead>
     <tr><th>Faza</th><th>Stanja</th><th class="c">Broj taktova</th><th>Namena</th></tr>
   </thead>
@@ -597,9 +597,20 @@ treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash;
     <tr><td><b>D</b></td><td><span class="mono">S_L_YX_FILL</span>,<br><span class="mono">S_L_YX_RUN</span>,<br><span class="mono">S_L_YX_DRAIN</span></td>
         <td class="c">tmp_w &middot; tmp_h + 1<br>po prozoru</td>
         <td>pipeline-ovana akumulacija tri sume nad pikselima šablona</td></tr>
+    <tr><td><b>D</b></td><td><span class="mono">S_L_YX_DRAIN2</span></td>
+        <td class="c">1</td>
+        <td>Akumulira poslednji registrovani par <span class="mono">df_reg&middot;dt_reg</span>;
+        poništava <span class="mono">mac_v</span>. Dodato u Koraku 8b uz MAC protočnost.</td></tr>
+    <tr><td><b>E</b></td><td><span class="mono">S_NCC_SQ</span></td>
+        <td class="c">1</td>
+        <td>Provera <span class="mono">den = 0</span>; ako nije, registruje
+        <span class="mono">num_sq &lt;= sum_num<sup>2</sup></span> i
+        <span class="mono">den_prod &lt;= den_f &middot; den_t</span>. Dodato u Koraku 8b da kvadriranje
+        ne ulazi kombinaciono u 83-bitni delilac.</td></tr>
     <tr><td><b>E</b></td><td><span class="mono">S_NCC_DIV</span>, <span class="mono">S_NCC_WAIT</span>,<br><span class="mono">S_WRITE_RESULT</span></td>
         <td class="c">~84 po prozoru</td>
-        <td>kvadriranje, množenje imenilaca, deljenje u 83 bita i upis rezultata</td></tr>
+        <td>Startuje <span class="mono">div_ncc</span> nad registrovanim vrednostima:
+        <span class="mono">(num_sq &lt;&lt; 31) / den_prod</span>; upis rezultata.</td></tr>
     <tr><td>&mdash;</td><td><span class="mono">S_DONE</span></td><td class="c">1</td>
         <td>spuštanje <span class="mono">busy</span>, postavljanje <span class="mono">done</span></td></tr>
   </tbody>
