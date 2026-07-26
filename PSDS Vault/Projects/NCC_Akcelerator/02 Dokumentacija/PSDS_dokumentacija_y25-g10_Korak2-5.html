@@ -900,12 +900,17 @@ organizovana protočno: u stanju <span class="mono">S_L_YX_RUN</span> se
 <b>istovremeno</b> akumulira podatak piksela <i>N</i> i izdaje adresa piksela
 <i>N&nbsp;+&nbsp;1</i>. Stanje <span class="mono">S_L_YX_FILL</span> puni protočnu
 strukturu (izdaje prvu adresu bez akumulacije), a
-<span class="mono">S_L_YX_DRAIN</span> je prazni (akumulira poslednji podatak bez
-izdavanja nove adrese). Cena je time <b>jedan takt po pikselu</b> plus jedan takt
-režije po prozoru. Slika 2 prikazuje preklapanje.</p>
+<span class="mono">S_L_YX_DRAIN</span> i
+<span class="mono">S_L_YX_DRAIN2</span> je prazne. Od Koraka 8b protočna struktura ima
+<b>tri stepena</b>: izdavanje adrese, registrovanje razlika
+<span class="mono">df</span>/<span class="mono">dt</span>, pa množenje i akumulacija.
+Presek je uveden da bi se putanja BRAM &rarr; oduzimanje &rarr; množenje &rarr;
+akumulator razdvojila na dva takta; sam je doneo <b>2,43 ns</b> vremenske rezerve
+(odeljak 10.5). Cena je i dalje <b>jedan takt po pikselu</b>, uz <b>dva</b> takta
+režije po prozoru umesto jednog. Slika 2 prikazuje preklapanje.</p>
 
 <figure>
-<svg viewBox="0 0 660 210" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+<svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
   <style>
     .lbl { font-size:10.5px; }
     .hd  { font-size:10.5px; font-weight:bold; }
@@ -927,8 +932,9 @@ režije po prozoru. Slika 2 prikazuje preklapanje.</p>
     <text class="hd" x="428" y="24" text-anchor="middle">…</text>
     <text class="hd" x="500" y="24" text-anchor="middle">tN-1</text>
     <text class="hd" x="572" y="24" text-anchor="middle">tN</text>
+    <text class="hd" x="644" y="24" text-anchor="middle">tN+1</text>
   </g>
-  <line class="gl" x1="104" y1="30" x2="608" y2="30"/>
+  <line class="gl" x1="104" y1="30" x2="680" y2="30"/>
 
   <!-- stanje -->
   <text class="hd" x="10" y="52">stanje</text>
@@ -940,6 +946,8 @@ režije po prozoru. Slika 2 prikazuje preklapanje.</p>
   <text class="txt" x="500" y="53" text-anchor="middle">RUN</text>
   <rect class="cel" x="536" y="38" width="72" height="22" fill="#f0f0ee"/>
   <text class="txt" x="572" y="53" text-anchor="middle">DRAIN</text>
+  <rect class="cel" x="608" y="38" width="72" height="22" fill="#f0f0ee"/>
+  <text class="txt" x="644" y="53" text-anchor="middle">DRAIN2</text>
 
   <!-- izdavanje adrese -->
   <text class="hd" x="10" y="92">izdaje adresu</text>
@@ -957,26 +965,49 @@ režije po prozoru. Slika 2 prikazuje preklapanje.</p>
   <text class="txt" x="500" y="93" text-anchor="middle">px N−1</text>
   <rect class="cel" x="536" y="78" width="72" height="22" fill="#fafafa"/>
   <text class="txt" x="572" y="93" text-anchor="middle">—</text>
+  <rect class="cel" x="608" y="78" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="644" y="93" text-anchor="middle">—</text>
 
-  <!-- akumulacija -->
-  <text class="hd" x="10" y="132">akumulira</text>
+  <!-- registruje df/dt -->
+  <text class="hd" x="10" y="132">registruje df/dt</text>
   <rect class="cel" x="104" y="118" width="72" height="22" fill="#fafafa"/>
   <text class="txt" x="140" y="133" text-anchor="middle">—</text>
-  <rect class="cel b" x="176" y="118" width="72" height="22"/>
+  <rect class="cel a" x="176" y="118" width="72" height="22"/>
   <text class="txt" x="212" y="133" text-anchor="middle">px 0</text>
-  <rect class="cel b" x="248" y="118" width="72" height="22"/>
+  <rect class="cel a" x="248" y="118" width="72" height="22"/>
   <text class="txt" x="284" y="133" text-anchor="middle">px 1</text>
-  <rect class="cel b" x="320" y="118" width="72" height="22"/>
+  <rect class="cel a" x="320" y="118" width="72" height="22"/>
   <text class="txt" x="356" y="133" text-anchor="middle">px 2</text>
-  <rect class="cel b" x="392" y="118" width="72" height="22"/>
+  <rect class="cel a" x="392" y="118" width="72" height="22"/>
   <text class="txt" x="428" y="133" text-anchor="middle">…</text>
-  <rect class="cel b" x="464" y="118" width="72" height="22"/>
+  <rect class="cel a" x="464" y="118" width="72" height="22"/>
   <text class="txt" x="500" y="133" text-anchor="middle">px N−2</text>
-  <rect class="cel b" x="536" y="118" width="72" height="22"/>
+  <rect class="cel a" x="536" y="118" width="72" height="22"/>
   <text class="txt" x="572" y="133" text-anchor="middle">px N−1</text>
+  <rect class="cel" x="608" y="118" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="644" y="133" text-anchor="middle">—</text>
 
-  <text class="st2" x="104" y="164">Ukupno: N + 1 takta za N piksela (jedan takt po pikselu + jedan takt režije).</text>
-  <text class="st2" x="104" y="180">Bez protočnosti bi bilo 2N taktova — ušteda blizu 50 % ukupne latencije jezgra.</text>
+  <!-- akumulacija -->
+  <text class="hd" x="10" y="172">akumulira</text>
+  <rect class="cel" x="104" y="158" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="140" y="173" text-anchor="middle">—</text>
+  <rect class="cel" x="176" y="158" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="212" y="173" text-anchor="middle">—</text>
+  <rect class="cel b" x="248" y="158" width="72" height="22"/>
+  <text class="txt" x="284" y="173" text-anchor="middle">px 0</text>
+  <rect class="cel b" x="320" y="158" width="72" height="22"/>
+  <text class="txt" x="356" y="173" text-anchor="middle">px 1</text>
+  <rect class="cel b" x="392" y="158" width="72" height="22"/>
+  <text class="txt" x="428" y="173" text-anchor="middle">…</text>
+  <rect class="cel b" x="464" y="158" width="72" height="22"/>
+  <text class="txt" x="500" y="173" text-anchor="middle">px N−3</text>
+  <rect class="cel b" x="536" y="158" width="72" height="22"/>
+  <text class="txt" x="572" y="173" text-anchor="middle">px N−2</text>
+  <rect class="cel b" x="608" y="158" width="72" height="22"/>
+  <text class="txt" x="644" y="173" text-anchor="middle">px N−1</text>
+
+  <text class="st2" x="104" y="204">Ukupno: N + 2 takta za N piksela (jedan takt po pikselu + dva takta režije).</text>
+  <text class="st2" x="104" y="220">Bez protočnosti bi bilo 2N taktova — ušteda blizu 50 % ukupne latencije jezgra.</text>
 </svg>
 <figcaption><b>Slika 2.</b> Preklapanje izdavanja adrese i akumulacije u pipeline-ovanoj unutrašnjoj petlji</figcaption>
 </figure>
