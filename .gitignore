@@ -46,6 +46,9 @@ desktop.ini
 PSDS Vault/.obsidian/workspace.json
 PSDS Vault/.obsidian/workspace-mobile.json
 
+# Vitis radni prostor (generisan iz XSA skriptama u src/vitis/scripts/)
+src/vitis/ws/
+
 # Vivado batch artefakti u korenu repoa
 # NA/ pravi apply_board_preset (PS7 summary) na relativnu putanju.
 NA/
