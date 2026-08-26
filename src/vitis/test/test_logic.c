@@ -78,6 +78,46 @@ static void test_center_mean_known_sample(void) {
     CHECK(logic_center_mean(img, 100, 0, 0) == 13, "center_mean na poznatom uzorku daje 13");
 }
 
+
+/* Ova dva testa zakljucavaju TACAN prozor 29..59 x 29..59 (31x31), isti kao
+   src/tb.cpp linije 143-148. Mutaciono testiranje je pokazalo da postojeci
+   testovi ne obaraju suzavanje prozora (npr. y<=59 -> y<=58) -- ova dva to
+   pokrivaju u oba smera (widen i narrow), za redove i kolone. */
+static void test_center_mean_window_exact_no_widen(void) {
+    unsigned char img[100 * 100];
+    int i, x, y;
+    for (i = 0; i < 100 * 100; i++) img[i] = 9;
+    /* Prsten TACNO jedan piksel izvan prozora 29..59 (redovi 28 i 60 na kolonama
+       28..60; kolone 28 i 60 na redovima 28..60) postavljen na drugu vrednost.
+       Ako logic_center_mean pokupi i jedan piksel van 29..59 u BILO KOM smeru
+       (gore, dole, levo, desno -- prosirenje prozora), prosek prestaje da bude
+       cista konstanta 9 i test pada. */
+    for (x = 28; x <= 60; x++) { img[28 * 100 + x] = 99; img[60 * 100 + x] = 99; }
+    for (y = 28; y <= 60; y++) { img[y * 100 + 28] = 99; img[y * 100 + 60] = 99; }
+    CHECK(logic_center_mean(img, 100, 0, 0) == 9,
+          "prosek ne sme pokupiti nijedan piksel van prozora 29..59 (bilo koji smer)");
+}
+
+static void test_center_mean_window_exact_edges_included(void) {
+    unsigned char img[100 * 100];
+    int i, x, y;
+    for (i = 0; i < 100 * 100; i++) img[i] = 10;
+    /* Sve cetiri ivice prozora (red 29, red 59, kolona 29, kolona 59, unutar
+       29..59) postavljene na 30; unutrasnjost (30..58 x 30..58) ostaje 10. */
+    for (x = 29; x <= 59; x++) { img[29 * 100 + x] = 30; img[59 * 100 + x] = 30; }
+    for (y = 29; y <= 59; y++) { img[y * 100 + 29] = 30; img[y * 100 + 59] = 30; }
+    /* Rucno izracunato: prozor 29..59 x 29..59 = 31x31 = 961 celija.
+       Unutrasnjost (redovi i kolone 30..58, po 29 vrednosti) = 29*29 = 841 celija
+       sa vrednoscu 10. Ivicne celije (red==29 ili red==59 ili kolona==29 ili
+       kolona==59) = 961 - 841 = 120 celija sa vrednoscu 30.
+       Suma = 841*10 + 120*30 = 8410 + 3600 = 12010.
+       mean = 12010 / 961 = 12 (celobrojno deljenje; 961*12 = 11532, ostatak 478).
+       Ako implementacija izostavi bilo koju ivicnu vrstu ili kolonu (npr. suzi
+       red 59 ili kolonu 59, sto je 31 celija sa vrednoscu 30), suma pada na
+       12010-930=11080 i cnt na 930, sto daje mean=11, ne 12 -- test bi pao. */
+    CHECK(logic_center_mean(img, 100, 0, 0) == 12,
+          "prosek mora ukljuciti TACNO sve ivice prozora 29..59 (bilo koja strana)");
+}
 static void test_fen_empty_board(void) {
     char b[8][8]; memset(b, ' ', sizeof b);
     char out[128];
@@ -130,6 +170,8 @@ int main(void) {
     test_center_mean_uniform();
     test_is_empty_center_pixel_differs();
     test_center_mean_known_sample();
+    test_center_mean_window_exact_no_widen();
+    test_center_mean_window_exact_edges_included();
     test_fen_empty_board();
     test_fen_mixed();
     test_fen_figure_in_middle();
