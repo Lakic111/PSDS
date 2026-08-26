@@ -78,3 +78,26 @@ logike. Za razliku od dodatnog protočnog stepena, ne košta ni takt latencije.
 
 Provera bi bila jedno merenje: `set NCC_FCLK 100` uz atribut, pa uporediti sa
 −0,054 ns. Videti `BUGS.md` za kontekst merenja.
+
+
+## Izmestiti AXI-Lite slave-ove na zaseban interkonekt — da burstovi prorade
+
+Nađeno u Koraku 9: burstovi duži od dva beata zaglavljuju `axi_interconnect_0`
+(`STRATEGY=1`, deljena magistrala). Zbog toga aplikacija radi prenose procesorom umesto
+DMA-om, što košta oko 9 % vremena.
+
+**Hipoteza:** u deljenom režimu svi slave-ovi dele podatkovni put, a tri od šest su
+AXI-Lite (`ncc0.S00`, `ncc1.S00`, `axi_cdma_0.S_AXI_LITE`) i ne podržavaju burst.
+
+**Predlog:** dva interkonekta — jedan `STRATEGY=1` samo za tri Lite slave-a (kontrolni
+registri, retke jednobeat transakcije), drugi za `ncc0.S01`, `ncc1.S01` i `S_AXI_HP0`,
+gde ide sav burst saobraćaj. Time se zadržava mala površina tamo gde je važna.
+
+**Provera:** jedna iteracija `run_impl.tcl` (~40 min) pa JTAG test iz `BUGS.md`
+(`cdma_probe.tcl`, BTT=16). Ako prođe, povratak na DMA je **jedna linija** —
+`NCC_USE_CDMA 1` u `src/vitis/app/ncc_hw.c`.
+
+**Rizik:** dva interkonekta troše više LUT-ova od jednog i mogu pogoršati tajming; zato
+STRATEGY=2 (pun krosbar) i nije upotrebljen (WNS −3,608 ns). Meriti pre nego se prihvati.
+
+Ideja sa istrage bug-a (26.08.2026).

@@ -11,6 +11,36 @@
 
 ---
 
+
+> ⚠️ **OGRANIČENJE NAĐENO NA PLOČI 2026-08-26: burstovi kroz `axi_interconnect_0`.**
+>
+> Izmereno preko JTAG-a, sa CDMA programiranim direktno i bez ijedne linije softvera:
+>
+> | Beatova | DDR→DDR (kroz HP0) | S01→S01 (kroz PL) |
+> |---|---|---|
+> | 1 | radi | radi |
+> | 2 | radi | — |
+> | 3 | **zaglavi** | — |
+> | 4 | **zaglavi** | **zaglavi** |
+>
+> Zaglavljivanje blokira **celu PL magistralu** — posle njega se ne mogu pročitati ni
+> CDMA registri, a procesor se ne može zaustaviti ni debagerom.
+>
+> Time su isključeni CDMA, `S_AXI_HP0`, S01 i topologija (provereno upitom nad `.bd`:
+> `axi_cdma_0/M_AXI ↔ axi_interconnect_0/S01_AXI`, `M05_AXI ↔ S_AXI_HP0`, svi taktovi na
+> `FCLK_CLK0`, adresna mapa CDMA mastera potpuna). Ostaje **burst kroz interkonekt**.
+>
+> Zašto nije izbilo u Koraku 7 ni 8: **PS `M_AXI_GP0` radi samo jednobeat transakcije**,
+> pa interkonekt nikad nije video burst. Prvi burst u istoriji dizajna poslao je CDMA u
+> Koraku 9. Ni jedan TB to nije mogao uhvatiti — TB-ovi gađaju `ncc_accel` direktno.
+>
+> **Posledica:** aplikacija Koraka 9 radi prenose **procesorom** (`NCC_USE_CDMA 0`).
+> Košta ~9 % vremena. DMA **ostaje u block designu**; ovaj dokument se ne menja.
+>
+> **Hipoteza (NEPOTVRĐENA):** u deljenom (SASD) režimu svi slave-ovi dele podatkovni put,
+> a tri od šest su AXI-Lite (`ncc0.S00`, `ncc1.S00`, `axi_cdma_0.S_AXI_LITE`). Provera bi
+> bila izmestiti ih na zaseban interkonekt. Videti `IDEJE.md` i `BUGS.md`.
+
 ## 0. Odluke ove sesije (fiksirane, ne re-litigirati)
 
 | # | Odluka | Obrazloženje |

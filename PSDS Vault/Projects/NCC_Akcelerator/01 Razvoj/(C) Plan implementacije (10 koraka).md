@@ -3,11 +3,11 @@
 Izvor: `06 Prilozi/Bodovanje projekta.pdf`. Koraci se **moraju** raditi redom.
 Za prolaz treba 50 bodova (koraci 1-5). Koraci 6-10 nose dodatnih 50.
 
-> **STANJE 2026-07-25: Koraci 1-7 ZAVRŠENI** (65 bodova).
-> Sledeće je **Korak 8** (analiza integrisanog sistema).
-> Part je promenjen na `xc7z010clg400-1` (bilo `clg225-2`) — videti Korak 7 dizajn §7.1.
-> Zvanična dokumentacija za Korake 2 i 5 predata u obliku PDF-a:
-> `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf`.
+> **STANJE 2026-08-27: KORACI 1-9 ZAVRŠENI** (90 bodova).
+> Sledeće i poslednje je **Korak 10** (TCL automatizacija).
+> Part je `xc7z010clg400-1`; ploča je **originalni Zybo**, `board_part
+> digilentinc.com:zybo:part0:2.0` (potvrđeno VGA konektorom, 2026-08-26).
+> Zvanična dokumentacija: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf`.
 
 > **⚠️ ZAOKRET 2026-07-20 (poništava belešku od 2026-07-14 ispod):** Korak 3 ide kroz
 > **ručni VHDL**, NE Vivado HLS. Pravilnik (`06 Prilozi/Bodovanje projekta.pdf`,
@@ -410,7 +410,9 @@ Detalji: `(C) Korak 7 - Dizajn integracije (block design).md` i
 
 ## Korak 8 — Analiza integrisanog sistema [5 bodova]
 
-**Status: 8a i 8b ZAVRŠENI (2026-07-26); 8c/8d/8e preostaju.**
+**Status: ZAVRŠENO (2026-07-26).** 8a-8e svi urađeni; PDF proširen na Korake 2-8.
+Brojke ispod su re-merene posle popravki AXI upisnog puta iz Koraka 9 (2026-08-27):
+**LUT 6.225 (35,37 %), FF 5.020, WNS +0,268 ns.**
 
 Reproducibilno iz `src/vhdl/script/run_impl.tcl` (post-route + phys_opt,
 `xc7z010clg400-1`).
@@ -467,7 +469,21 @@ slike, 8×8 petlja, provera praznog polja, coarse/fine NCC, FEN generisanje), al
 `Xil_Out32`/`Xil_In32` (ili volatile pokazivači) umesto TLM `b_transport`, i pravi
 AXI DMA drajver umesto `dma.cpp` modela.
 
-**Status:** nije započeto.
+**Status: ZAVRŠENO (2026-08-27).** Aplikacija u `src/vitis/app/`, skripte u
+`src/vitis/scripts/`. Pet faza dovođenja u pogon, svaka potvrđena na ploči:
+AXI-Lite → S01 memorije → jezgro računa (`0x80000000 @ 956`) → prenosi → pun tok.
+
+**FEN sa ploče je znak po znak identičan zvaničnom**,
+`rnbqkbnr/pp5p/4ppp1/2pp4/5P2/1P1BPN2/P1PPQ1PP/RNB1K2R`, 32/32 polja, **1.782 ms**.
+Raspodela: računanje 1.555 ms (87,3 %), upis u S01 120 ms, čitanje rezultata 67 ms,
+procesor 40 ms. Naspram ESL reference (3,667 s) **2,06× brže**.
+
+⚠️ Prenosi idu **procesorom** (`NCC_USE_CDMA 0`) — burstovi duži od dva beata
+zaglavljuju `axi_interconnect_0`. Košta ~9 %; DMA ostaje u block designu. `BUGS.md`.
+
+Usput nađena i popravljena **dva bug-a u IP-u** koja su preživela Korake 6-8: S00 i S01
+AXI upisni put visili su kad `W` stigne pre `AW`. Novi TB-ovi `ncc_accel_wfirst_tb` i
+`ncc_accel_s01_burst_wfirst_tb` to pokrivaju i dokazano padaju na starom RTL-u.
 
 ## Korak 10 — TCL skripta za automatizaciju [10 bodova]
 

@@ -67,16 +67,21 @@ PSDS Vault/
 ## Moji trenutni projekti i pregledi
 
 ### NCC_Akcelerator — `Projects/NCC_Akcelerator/`
-**Status (2026-07-22): Koraci 1-5 ZAVRŠENI** — svih 50 bodova za prolaz pokriveno.
+**Status (2026-08-27): KORACI 1-9 ZAVRŠENI — 90 bodova.** Preostaje samo Korak 10.
 Šahovski NCC template-matching akcelerator (coarse-to-fine, dva paralelna NCC bloka);
 SystemC/TLM ESL model je referenca, a RTL se piše **ručno u VHDL-u** (`src/vhdl/`),
 ne kroz HLS.
 
 - C model (Korak 1): `src/hls/`, TDD, 32/32 figure tačno
-- RTL (Korak 3): `ncc_core.vhd`, 21 stanje, sekvencijalni delioci + protočna petlja
+- RTL (Korak 3): `ncc_core.vhd`, **23 stanja** (dva preseka za tajming u Koraku 8)
 - Verifikacija (Korak 4): golden 4×4 + realni 90×90, bit-tačno
-- Sinteza (Korak 5): 1526 LUT (8.7%), 9 DSP, 9 BRAM, WNS +1.179 ns @ 100 MHz,
-  latencija 2.451.212 taktova
-- Dokumentacija za profesora: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf`
+- Analiza (Korak 5): golo jezgro post-route 1.472 LUT, WNS **+0,146 ns na 10 ns**
+- IP jezgro (Korak 6) i block design (Korak 7): `ncc_accel`, `ncc_system`
+- Sistem (Korak 8): **6.225 LUT (35,4 %)**, WNS **+0,268 ns**, 90,909 MHz
+- **Ploča (Korak 9): FEN tačan, 32/32 polja, 1.782 ms — 2,06× brže od ESL reference**
+- Dokumentacija za profesora: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf`
 
-Sledeće: **Korak 6** (AXI-Lite + AXI master omotač, pakovanje u IP).
+⚠️ Prenosi u aplikaciji idu **procesorom, ne DMA-om** — burstovi zaglavljuju
+`axi_interconnect_0`. Detalji u `Projects/NCC_Akcelerator/BUGS.md`.
+
+Sledeće: **Korak 10** (`package_ip.tcl` + ulančavanje celog toka do XSA).

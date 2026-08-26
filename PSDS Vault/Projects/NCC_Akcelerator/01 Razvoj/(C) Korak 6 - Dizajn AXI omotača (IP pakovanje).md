@@ -1,8 +1,27 @@
 # Korak 6 — Dizajn AXI omotača i pakovanje u IP jezgro
 
-> **Status:** IMPLEMENTIRANO I VERIFIKOVANO (2026-07-24). Integracioni TB
-> `src/vhdl/tb/ncc_accel_tb.vhd` daje zlatni peak `0x80000000 @ (32,14)` kroz AXI;
-> IP spakovan (`.zip` u ip_repo). Ovaj dokument je merodavan opis dizajna omotača.
+> **Status:** IMPLEMENTIRANO I VERIFIKOVANO (2026-07-24), **POPRAVLJENO 2026-08-26/27**.
+> Integracioni TB `src/vhdl/tb/ncc_accel_tb.vhd` daje zlatni peak `0x80000000 @ (32,14)`
+> kroz AXI, a isti rezultat je 2026-08-27 potvrđen **na pravoj ploči** (Korak 9, faza 3).
+> Ovaj dokument je merodavan opis dizajna omotača.
+>
+> ⚠️ **Dva protokolarna bug-a nađena tek na hardveru** (preživeli Korake 6, 7 i 8):
+> **oba AXI slave-a su visila kad `W` stigne pre `AW`**, što AXI izričito dozvoljava.
+> `axi_wready` se dizao u stanju `Idle` i nikad spuštao, pa je W beat bio prihvaćen a
+> nigde zabeležen; `BVALID` se nikad ne izda i master visi zauvek.
+>
+> - S00 (AXI-Lite) — commit `720d162`
+> - S01 (AXI-Full, burstovi) — commit `4bac595`, uz dodatnu zamku: adresni proces je
+>   pre-inkrementirao na goli `WVALID` umesto na stvarni handshake
+>
+> Oba su imala **polovičnu popravku iz Koraka 8** (`wr_beat`), koja je rešila samo
+> posledicu po podatke, ne i zastoj. Novi TB-ovi `ncc_accel_wfirst_tb` i
+> `ncc_accel_s01_burst_wfirst_tb` pokrivaju sve redoslede i **dokazano padaju na starom
+> RTL-u**. Popravke su smanjile površinu (1.910 → **1.887 LUT** po instanci) i
+> poboljšale tajming. Puni zapis: `BUGS.md`.
+>
+> ⚠️ `ncc_accel_burst_tb` iz Koraka 7 je **kodirao bug** — nikad nije čitao `s01_wready`,
+> pa je prolazio samo zato što je `wready` bio trajno visok. Popravljen (`cb8b67a`).
 > **Izvor obrasca:** `06 Prilozi/Vezbe/Vezba-8-9-IP-Packaging.pdf` (Glava 6),
 > pročitan u celosti (str. 229–302). Beleške: `01 Razvoj/Vezbe/(C) Vezba 08-09 - IP Packaging.md`.
 > **Cilj:** spakovati `src/vhdl/ncc_core.vhd` (+ `ncc_pkg.vhd`) u AXI IP jezgro
