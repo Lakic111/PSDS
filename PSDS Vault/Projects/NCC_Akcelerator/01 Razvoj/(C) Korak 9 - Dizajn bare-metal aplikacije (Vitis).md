@@ -169,9 +169,21 @@ Prenos po jednom zauzetom polju, izvedeno iz gornjeg toka:
 | fini šabloni ×2 | 2 × 900 × 4 | 7.200 |
 | **ukupno** | | **93.600 B = 91 KiB** |
 
-⚠️ **Poglavlje 9.5 tvrdi „oko 146 KB" i ne pokazuje izvođenje.** Ni sa ispravljenim
-dimenzijama se ne poklapa (91 KiB). Ne usklađujem svoju računicu sa njom. Task 3
-**meri** stvarni prenos, pa se posle merenja 9.5 ili ispravlja ili dobija izvođenje.
+✅ **RAZREŠENO MERENJEM 2026-08-27.** Ranija verzija ovog odeljka dvaput je tvrdila da
+brojku „oko 146 KB" iz poglavlja 9.5 **ne mogu rekonstruisati** i da se ne poklapa sa
+gornjih 93.600 B. **Ta tvrdnja je bila pogrešna** — brojao sam samo **upise**, a
+poglavlje 9.5 broji **ukupan saobraćaj u oba smera**.
+
+Izmereno na ploči, po jednom zauzetom polju (32 polja, instrumentisan tok):
+
+| Smer | Reči | Bajtova |
+|---|---|---|
+| upis u S01 (slika i šabloni) | 22.730 | 90.919 |
+| čitanje mape rezultata | 14.831 | 59.323 |
+| **ukupno** | **37.561** | **150.243 ≈ 147 KiB** |
+
+Dokumentacija je bila u pravu. Tabela iznad ostaje tačna za **upise**; ukupan saobraćaj
+je za oko 59 KB veći zbog čitanja rezultata nazad.
 
 
 Paralelizam je **po šablonu**, ne po polju — dva bloka obrađuju dva različita šablona nad

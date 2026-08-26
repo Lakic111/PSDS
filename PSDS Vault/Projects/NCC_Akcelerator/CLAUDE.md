@@ -116,11 +116,28 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 
 ## Trenutni status
 
-> **Zadnje ažuriranje:** 2026-08-26
-> **Koraci 1-8 ZAVRŠENI (70 bodova).** Preostaju Korak 9 (20) i Korak 10 (10).
+> **Zadnje ažuriranje:** 2026-08-27
+> **KORACI 1-9 ZAVRŠENI (90 bodova).** Preostaje samo **Korak 10** (10 bodova).
 > Merodavna dokumentacija: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf`
 > (34 strane) — pokriva Korake 2-8, sa izmerenim post-route brojkama.
-> **Sledeće: Korak 9** — XSA export, bare-metal aplikacija u Vitisu.
+> **KORAK 9 ZAVRŠEN 2026-08-27.** FEN sa ploče je znak po znak identičan zvaničnom:
+> `rnbqkbnr/pp5p/4ppp1/2pp4/5P2/1P1BPN2/P1PPQ1PP/RNB1K2R`, 32/32 polja, **1.782 ms**.
+> Izmerena raspodela: računanje 1.555 ms (87,3 %), upis u S01 120 ms, čitanje rezultata
+> 67 ms, obrada na procesoru 40 ms. Naspram ESL reference (3,667 s) **2,06× brže**.
+>
+> ⚠️ **Prenosi idu PROCESOROM, ne DMA-om** (`NCC_USE_CDMA 0` u `ncc_hw.c`). Burstovi duži
+> od dva beata zaglavljuju `axi_interconnect_0` — izmereno preko JTAG-a, detalji u
+> `BUGS.md`. Košta ~9 % vremena; DMA ostaje u block designu, aplikacija ga ne koristi.
+> Povratak je jedna linija kad se interkonekt popravi.
+>
+> **Dva bug-a u IP-u nađena i popravljena usput** (preživeli Korake 6, 7 i 8): S00 i S01
+> AXI upisni put visili su kad `W` stigne pre `AW`. Oba su imala polovičnu popravku iz
+> Koraka 8 koja je rešila samo posledicu po podatke. Novi testbenčevi
+> (`ncc_accel_wfirst_tb`, `ncc_accel_s01_burst_wfirst_tb`) pokrivaju sva tri/četiri
+> redosleda i dokazano padaju na starom RTL-u. Popravke su smanjile površinu i
+> poboljšale tajming.
+>
+> **Sledeće: Korak 10** — `package_ip.tcl` + ulančavanje celog toka do XSA.
 > ✅ **Ploča razrešena 2026-08-26: originalni Zybo** (`zybo:part0:2.0`). Ceo tok pušten
 > ponovo sa tim presetom — **timing zatvara, WNS +0,181 ns**; brojke se nisu bitno
 > pomerile. **Bitstream napravljen** (`ncc_system_wrapper.bit`, 2.083.870 B, DRC 0
@@ -132,15 +149,15 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 >
 > | Resurs | Iskorišćeno | Kapacitet | % |
 > |---|---|---|---|
-> | Slice LUT | 6.274 | 17.600 | **35,65%** |
-> | Slice Registers | 5.024 | 35.200 | 14,3% |
+> | Slice LUT | 6.225 | 17.600 | **35,37%** |
+> | Slice Registers | 5.020 | 35.200 | 14,26% |
 > | Block RAM Tile | 39 (38×36k + 2×18k) | 60 | **65,0%** |
 > | DSP48E1 | 18 | 80 | 22,5% |
 >
-> Po instanci: `ncc0`/`ncc1` po **1.910 LUT / 1.240 FF / 19 RAMB36 / 9 DSP**;
-> `axi_interconnect_0` 1.616 LUT; `axi_cdma_0` 807 LUT.
+> Po instanci: `ncc0`/`ncc1` po **1.887 LUT / 1.238 FF / 19 RAMB36 / 9 DSP**;
+> `axi_interconnect_0` 1.622 LUT; `axi_cdma_0` 811 LUT.
 >
-> **WNS +0,181 ns na 11,0 ns → timing ZATVARA na 90,909 MHz** (traženo 95, PS PLL
+> **WNS +0,268 ns na 11,0 ns → timing ZATVARA na 90,909 MHz** (traženo 95, PS PLL
 > daje 1000/11). **Fmax integrisanog sistema ~99,5 MHz** — 100 MHz ne zatvara, ali za
 > svega **−0,054 ns** i 6 od 15.481 krajnjih tačaka (kontrolno merenje 2026-08-26,
 > `NCC_FCLK 100`). Radna tačka je 90,909 jer PS PLL deli celim brojem — između 90,909 i
@@ -278,8 +295,10 @@ Sužavanje bi spustilo BRAM sa 9 na ~6 blokova. Nije urađeno jer 15% nije usko 
       Izvršeno kroz 10 taskova; trag u `.superpowers/sdd/(C) Korak 8 .../progress.md`.
       Model propusnosti: `T = 2·img_w·img_h + 2·N + res_w·res_h·(N+112)`;
       izmereno **2.461.201 taktova = 27,07 ms** za 90×90/25×15 pri 90,909 MHz.
-- [ ] Korak 9: Bitstream + bare-metal test u Vitis (port `tb.cpp` logike na realne
-      registre/AXI DMA drajver) [20 bodova]
+- [x] **Korak 9: Bitstream + bare-metal test u Vitis [20 bodova]** (ZAVRŠENO 2026-08-27)
+      FEN sa ploče identičan zvaničnom, 32/32 polja, 1.782 ms, 2,06× brže od ESL
+      reference. Pet faza dovođenja u pogon, svaka potvrđena na hardveru.
+      Prenosi procesorom (`NCC_USE_CDMA 0`) — burstovi zaglavljuju interkonekt.
       - [x] **Task 1 (2026-08-26): bitstream.** `write_bitstream` + KAPIJA 3 (ne pravi
         bitstream ako timing ne zatvara) dodati u `run_impl.tcl`. Izmereno: DRC 0
         grešaka, `.bit` 2.083.870 B.

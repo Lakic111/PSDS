@@ -1458,7 +1458,7 @@ logici moraju stati i AXI interkonekt i DMA. Ovde je važna razlika u tome
 <i>šta</i> se meri: brojke iz Tabele 9 su <b>golo jezgro</b>, dok je u integrisanom
 sistemu jedna instanca ceo IP <span class="mono">ncc_accel</span> &mdash; jezgro
 <i>plus</i> dva AXI kontrolera i memorijski podsistem &mdash; što po instanci iznosi
-1.910 LUT, ne 1.472. Izmereno zauzeće celog sistema je <b>35,6&nbsp;%</b> LUT-ova
+1.887 LUT, ne 1.472. Izmereno zauzeće celog sistema je <b>35,4&nbsp;%</b> LUT-ova
 (odeljak 10.2), i time staje sa rezervom.</p>
 
 <h2>7.3. Kritična putanja i maksimalna frekvencija</h2>
@@ -2028,6 +2028,26 @@ pojedinačnim pristupima, to traje oko 3,4&nbsp;ms, odnosno oko 7&nbsp;% ukupnog
 obrade jednog polja. DMA isti posao obavi za oko 0,4&nbsp;ms, dakle oko 1&nbsp;%.
 <b>Neto dobitak je oko 6&nbsp;% ukupnog vremena.</b></p>
 
+<p class="noind"><b>Provereno merenjem na ploči.</b> Procena iznad je naknadno
+potvrđena instrumentisanim izvršavanjem celog toka na hardveru (Korak 9). Mereno po
+jednom zauzetom polju:</p>
+
+<table>
+  <caption><b>Tabela 25.</b> Izmereni saobraćaj po jednom polju table (ploča, 32 polja)</caption>
+  <thead>
+    <tr><th>Smer</th><th class="n">Reči</th><th class="n">Bajtova</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>upis u <span class="mono">S01</span> (slika i šabloni)</td><td class="n">22.730</td><td class="n">90.919</td></tr>
+    <tr><td>čitanje mape rezultata</td><td class="n">14.831</td><td class="n">59.323</td></tr>
+    <tr><td><b>ukupno</b></td><td class="n"><b>37.561</b></td><td class="n"><b>150.243 &asymp; 147 KiB</b></td></tr>
+  </tbody>
+</table>
+
+<p class="noind">Izmerena vrednost potvrđuje procenu od „oko 146&nbsp;KB". Vredi
+naglasiti da ta brojka obuhvata <b>oba smera</b> &mdash; sam upis slike i šablona iznosi
+oko 91&nbsp;KB, a ostatak je čitanje mape rezultata nazad.</p>
+
 <p>Preklapanje prenosa sa računanjem &mdash; što bi bio pravi dobitak &mdash; nije moguće
 ni u jednom od dva slučaja, jer su memorije jednostruko baferovane i jezgro ih čita dok
 računa. DMA je zato <i>brži prenos</i>, a ne <i>skrivena latencija</i>. Dvostruko
@@ -2063,8 +2083,8 @@ daje rezervu od &minus;0,714&nbsp;ns, a strategija sa optimizacijom posle rutira
     <tr><th>Resurs</th><th class="n">Utrošeno</th><th class="n">Raspoloživo</th><th class="n">Iskorišćenost</th></tr>
   </thead>
   <tbody>
-    <tr><td>Slice LUT</td><td class="n">6.274</td><td class="n">17.600</td><td class="n"><b>35,65 %</b></td></tr>
-    <tr><td>Slice registri (FF)</td><td class="n">5.024</td><td class="n">35.200</td><td class="n">14,27 %</td></tr>
+    <tr><td>Slice LUT</td><td class="n">6.225</td><td class="n">17.600</td><td class="n"><b>35,37 %</b></td></tr>
+    <tr><td>Slice registri (FF)</td><td class="n">5.020</td><td class="n">35.200</td><td class="n">14,26 %</td></tr>
     <tr><td>Block RAM (ukupno)</td><td class="n">39</td><td class="n">60</td><td class="n"><b>65,00 %</b></td></tr>
     <tr><td>DSP48E1</td><td class="n">18</td><td class="n">80</td><td class="n">22,50 %</td></tr>
   </tbody>
@@ -2076,16 +2096,16 @@ daje rezervu od &minus;0,714&nbsp;ns, a strategija sa optimizacijom posle rutira
     <tr><th>Blok</th><th class="n">LUT</th><th class="n">FF</th><th class="n">RAMB36</th><th class="n">DSP</th></tr>
   </thead>
   <tbody>
-    <tr><td><span class="mono">ncc0</span> (ceo IP)</td><td class="n">1.910</td><td class="n">1.240</td><td class="n">19</td><td class="n">9</td></tr>
-    <tr><td><span class="mono">ncc1</span> (ceo IP)</td><td class="n">1.910</td><td class="n">1.240</td><td class="n">19</td><td class="n">9</td></tr>
-    <tr><td><span class="mono">axi_interconnect_0</span></td><td class="n">1.616</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
-    <tr><td><span class="mono">axi_cdma_0</span></td><td class="n">807</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+    <tr><td><span class="mono">ncc0</span> (ceo IP)</td><td class="n">1.887</td><td class="n">1.238</td><td class="n">19</td><td class="n">9</td></tr>
+    <tr><td><span class="mono">ncc1</span> (ceo IP)</td><td class="n">1.887</td><td class="n">1.238</td><td class="n">19</td><td class="n">9</td></tr>
+    <tr><td><span class="mono">axi_interconnect_0</span></td><td class="n">1.622</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
+    <tr><td><span class="mono">axi_cdma_0</span></td><td class="n">811</td><td class="n">&mdash;</td><td class="n">&mdash;</td><td class="n">&mdash;</td></tr>
   </tbody>
 </table>
 
-<p>Po instanci je <b>1.910 LUT</b>, a golo jezgro troši 1.472 (odeljak 7.2) &mdash; razlika
+<p>Po instanci je <b>1.887 LUT</b>, a golo jezgro troši 1.472 (odeljak 7.2) &mdash; razlika
 od oko 440 LUT su dva AXI kontrolera i memorijski podsistem, dakle cena standardnog
-interfejsa. Interkonekt i DMA zajedno troše 2.423 LUT, oko 14&nbsp;% uređaja.</p>
+interfejsa. Interkonekt i DMA zajedno troše 2.433 LUT, oko 14&nbsp;% uređaja.</p>
 
 <p class="noind"><b>Blok-memorija je najveće zauzeće i naša slabost.</b> Sa 65&nbsp;% je
 to jedini resurs bez velike rezerve, i tu smo <b>slabiji od referentnog rešenja</b> iz
@@ -2106,10 +2126,10 @@ instanca.</p>
   </thead>
   <tbody>
     <tr><td>Radni takt</td><td class="n"><b>90,909 MHz</b> (period 11,000 ns)</td></tr>
-    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+0,181 ns</b></td></tr>
-    <tr><td>Najgora rezerva za zadržavanje (WHS)</td><td class="n">+0,034 ns</td></tr>
-    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n"><b>0 od 15.460</b></td></tr>
-    <tr><td>Kritična putanja</td><td class="n"><span class="mono">ncc0/core_inst/v_reg[1]</span> &rarr;<br>
+    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+0,268 ns</b></td></tr>
+    <tr><td>Najgora rezerva za zadržavanje (WHS)</td><td class="n">+0,039 ns</td></tr>
+    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n"><b>0 od 15.458</b></td></tr>
+    <tr><td>Kritična putanja</td><td class="n"><span class="mono">ncc0/core_inst/v_reg[2]</span> &rarr;<br>
         <span class="mono">ncc0/ms_inst/img_mem/ADDRBWRADDR[14]</span></td></tr>
     <tr><td>Provera pravila projektovanja</td><td class="n">bez kritičnih upozorenja</td></tr>
   </tbody>
@@ -2162,6 +2182,43 @@ osnovu merenja na 11&nbsp;ns, gde adresna putanja jeste vezujuća. Kontrolno mer
 nije kritična. Zadržava se kao mera za smanjenje logike, ne kao put do 100&nbsp;MHz.</p>
 
 <h2>10.4. Propusnost sistema</h2>
+
+<p class="noind"><b>Izmereno na ploči.</b> Ceo tok &mdash; učitavanje slike table,
+petlja 8&times;8, gruba pretraga, fina potvrda i generisanje FEN notacije &mdash; izvršen
+je na hardveru u okviru Koraka 9. Rezultat je <b>bit-identičan</b> referentnom modelu u
+jeziku C: 32 od 32 polja prepoznata, FEN znak po znak jednak zvaničnom.</p>
+
+<table>
+  <caption><b>Tabela 26.</b> Izmerena raspodela vremena na ploči (cela tabla, 32 zauzeta polja)</caption>
+  <thead>
+    <tr><th>Faza</th><th class="n">Vreme</th><th class="n">Udeo</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>računanje (čekanje jezgra)</td><td class="n"><b>1.555 ms</b></td><td class="n"><b>87,3 %</b></td></tr>
+    <tr><td>upis u <span class="mono">S01</span></td><td class="n">120 ms</td><td class="n">6,7 %</td></tr>
+    <tr><td>čitanje rezultata</td><td class="n">67 ms</td><td class="n">3,8 %</td></tr>
+    <tr><td>obrada na procesoru<sup>*</sup></td><td class="n">40 ms</td><td class="n">2,2 %</td></tr>
+    <tr><td><b>ukupno</b></td><td class="n"><b>1.782 ms</b></td><td class="n">100 %</td></tr>
+  </tbody>
+</table>
+
+<p class="noind"><sup>*</sup> 2&times; smanjivanje segmenta, isecanje segmenta iz slike
+table i provera praznog polja &mdash; sve bez učešća programabilne logike.</p>
+
+<p class="noind"><b>Merenje potvrđuje model latencije.</b> Model predviđa oko
+1.680&nbsp;ms računanja za 32 polja; izmereno je 1.555&nbsp;ms. Razlika je u tome što
+model svakom polju pripisuje punu cenu, a polja sa manje kandidata je troše manje.</p>
+
+<p class="noind"><b>Poređenje sa referentnim rešenjem.</b> Obrada iste slike
+(<span class="mono">board2.txt</span>) u referentnom rešenju sa dva NCC bloka i
+softverskim optimizacijama traje <b>3,667&nbsp;s</b>. Na ploči je izmereno
+<b>1,782&nbsp;s</b> &mdash; <b>2,06&times; brže</b>, uz identičan rezultat.</p>
+
+<p class="noind"><b>Napomena o prenosu podataka.</b> Prenosi u izmerenom toku radi
+procesor, ne DMA: <span class="mono">axi_cdma</span> ne uspeva da izvrši prenos duži od
+dva takta magistrale kroz interkonekt konfigurisan kao deljena magistrala, pa je za
+merenje korišćen procesorski prenos. Iz tabele se vidi da to košta najviše
+<b>oko 9&nbsp;%</b> ukupnog vremena, jer računanje ionako čini 87&nbsp;%.</p>
 
 <p>Latencija jednog poziva je izmerena simulacijom i iznosi 2.461.201 takt (odeljak 7.4),
 što pri radnom taktu od 90,909&nbsp;MHz daje <b>27,07&nbsp;ms</b>. Model latencije
@@ -2226,7 +2283,7 @@ merenja na 10&nbsp;ns; aktuelna rezerva sistema na tom ograničenju je &minus;0,
 &mdash; videti odeljak 10.3.)</p>
 
 <p class="noind">Brojke u ovoj tabeli namerno se razlikuju od Tabele 19 (6.261 naspram
-6.274&nbsp;LUT). Ovde je reč o <b>kontrolisanom poređenju</b>: obe vrednosti, i pre i
+6.225&nbsp;LUT). Ovde je reč o <b>kontrolisanom poređenju</b>: obe vrednosti, i pre i
 posle sužavanja porta, izmerene su u istom toku i sa istim presetom, pa je razlika između
 njih pripisiva isključivo toj izmeni. Tabela 19 daje aktuelno stanje sistema, izmereno
 kasnije sa presetom stvarne ploče. Prenošenje jedne brojke u drugo poređenje pokvarilo bi
@@ -2253,10 +2310,10 @@ odeljka.</p>
     <tr><th>Veličina</th><th class="n">Referentno rešenje</th><th class="n">Ovaj rad</th></tr>
   </thead>
   <tbody>
-    <tr><td>LUT po instanci</td><td class="n">5.269</td><td class="n"><b>1.910</b></td></tr>
+    <tr><td>LUT po instanci</td><td class="n">5.269</td><td class="n"><b>1.887</b></td></tr>
     <tr><td>DSP po instanci</td><td class="n">16</td><td class="n"><b>9</b></td></tr>
     <tr><td>Blok-memorija po instanci</td><td class="n">4 manja bloka</td><td class="n">19 većih &larr; slabije</td></tr>
-    <tr><td>LUT za dve instance</td><td class="n">10.538 (59,9 %)</td><td class="n"><b>ceo sistem</b> 6.274 (35,7 %)</td></tr>
+    <tr><td>LUT za dve instance</td><td class="n">10.538 (59,9 %)</td><td class="n"><b>ceo sistem</b> 6.225 (35,4 %)</td></tr>
     <tr><td>Taktova za 90&times;90 / 30&times;30</td><td class="n">10.360.183</td><td class="n"><b>3.783.652</b></td></tr>
     <tr><td>Taktova po piksel-operaciji</td><td class="n">3,09</td><td class="n"><b>1,13</b></td></tr>
   </tbody>
@@ -2311,12 +2368,12 @@ nivou celog sistema:</p>
 <ul class="plain">
   <li>izlaz kroz AXI omotač je <b>bit-identičan</b> golom jezgru, čime je verifikacija iz
       poglavlja 7 prenesena na spakovan blok bez ponovnog dokazivanja (odeljak 7.5);</li>
-  <li>ceo sistem zauzima <b>35,7&nbsp;% LUT-ova</b> uređaja &mdash; <b>manje nego što
+  <li>ceo sistem zauzima <b>35,4&nbsp;% LUT-ova</b> uređaja &mdash; <b>manje nego što
       referentno rešenje troši samo na svoja dva jezgra</b> (59,9&nbsp;%) &mdash; i po
-      instanci 1.910 naspram 5.269 LUT, odnosno 9 naspram 16 DSP blokova
+      instanci 1.887 naspram 5.269 LUT, odnosno 9 naspram 16 DSP blokova
       (odeljci 10.2 i 10.6);</li>
   <li>sistem <b>zatvara vremenska ograničenja</b> na 90,909 MHz, sa rezervom od
-      +0,181 ns i bez ijedne od 15.460 krajnjih tačaka koja krši ograničenje
+      +0,268 ns i bez ijedne od 15.458 krajnjih tačaka koja krši ograničenje
       (odeljak 10.3);</li>
   <li>na istom zadatku sistem troši <b>2,74&times; manje taktova</b> od referentnog
       rešenja: 3.783.652 naspram 10.360.183 (odeljak 10.6).</li>
