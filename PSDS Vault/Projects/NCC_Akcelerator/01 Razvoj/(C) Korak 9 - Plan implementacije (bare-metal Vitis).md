@@ -124,7 +124,9 @@ def downsample2x(px, w, h):
         for x in range(ow):
             s = (px[(2*y)*w + 2*x] + px[(2*y)*w + 2*x + 1]
                  + px[(2*y+1)*w + 2*x] + px[(2*y+1)*w + 2*x + 1])
-            out.append(s // 4)
+            # ZAOKRUZIVANJE, ne odsecanje -- referentni tb.cpp radi (s + 2) >> 2.
+            # Sa s // 4 se 33,5 % grubih piksela razlikuje od izvrsne specifikacije.
+            out.append((s + 2) >> 2)
     return out, ow, oh
 
 def emit(fh, name, vals, per_line=16):
@@ -282,14 +284,32 @@ static void test_max_u32(void) {
 }
 
 static void test_downsample(void) {
-    /* 4x4 -> 2x2, svaki izlaz je prosek 2x2 bloka */
+    /* 4x4 -> 2x2, svaki izlaz je zaokruzen prosek 2x2 bloka: (s + 2) >> 2 */
     unsigned char src[16] = { 0,4,8,12,  4,8,12,16,  0,0,0,0,  8,8,8,8 };
     unsigned char dst[4];
     logic_downsample2x(src, 4, 4, dst);
-    CHECK(dst[0] == 4,  "downsample [0] = (0+4+4+8)/4 = 4");
-    CHECK(dst[1] == 12, "downsample [1] = (8+12+12+16)/4 = 12");
-    CHECK(dst[2] == 4,  "downsample [2] = (0+0+8+8)/4 = 4");
-    CHECK(dst[3] == 4,  "downsample [3] = (0+0+8+8)/4 = 4");
+    CHECK(dst[0] == 4,  "downsample [0]: s=16 -> 4");
+    CHECK(dst[1] == 12, "downsample [1]: s=48 -> 12");
+    CHECK(dst[2] == 4,  "downsample [2]: s=16 -> 4");
+    CHECK(dst[3] == 4,  "downsample [3]: s=16 -> 4");
+}
+
+/* Gornji test je SLEP na razliku izmedju s/4 i (s+2)>>2 jer su sve sume
+   tacni umnosci 4. Ovaj bira sume kod kojih zaokruzivanje odlucuje. */
+static void test_downsample_zaokruzivanje(void) {
+    unsigned char dst[1];
+    /* s = 2 -> odsecanje daje 0, zaokruzivanje 1 */
+    unsigned char a[4] = { 1,1,0,0 };
+    logic_downsample2x(a, 2, 2, dst);
+    CHECK(dst[0] == 1, "s=2 mora dati 1 (zaokruzivanje), ne 0 (odsecanje)");
+    /* s = 6 -> odsecanje 1, zaokruzivanje 2 */
+    unsigned char b[4] = { 3,3,0,0 };
+    logic_downsample2x(b, 2, 2, dst);
+    CHECK(dst[0] == 2, "s=6 mora dati 2, ne 1");
+    /* s = 1 -> oba daju 0, granicni slucaj */
+    unsigned char c[4] = { 1,0,0,0 };
+    logic_downsample2x(c, 2, 2, dst);
+    CHECK(dst[0] == 0, "s=1 mora dati 0");
 }
 
 static void test_fen_empty_board(void) {
@@ -318,6 +338,7 @@ static void test_is_white(void) {
 int main(void) {
     test_max_u32();
     test_downsample();
+    test_downsample_zaokruzivanje();
     test_fen_empty_board();
     test_fen_mixed();
     test_is_white();
@@ -347,8 +368,14 @@ clean:
 - [ ] **Korak 2: Pusti testove i potvrdi da NE prolaze**
 
 ```bash
-cd "C:/Users/pc/Desktop/PSDS/src/vitis/test" && make run
+cd "C:/Users/pc/Desktop/PSDS" && bash src/vitis/test/run_tests.sh
 ```
+
+⚠️ **Ne koristiti `make` na ovoj mašini.** Nije u PATH-u (postoji samo
+`/c/Users/pc/msys64/usr/bin/make.exe`), a i pozvan punom putanjom pada sa
+`Cannot create temporary file in C:\WINDOWS\: Permission denied` — i sa
+`TMP`/`TEMP`/`TMPDIR` postavljenim, u oba oblika putanje. `Makefile` je zadržan jer radi
+u normalnom MSYS2 shell-u, ali je `run_tests.sh` (direktan `gcc`) merodavna provera.
 
 Očekivano: greška kompilacije — `ncc_logic.h: No such file or directory`.
 To je RED faza; ne nastavljaj dok ne vidiš pad.
@@ -386,7 +413,9 @@ void logic_downsample2x(const unsigned char *src, int w, int h, unsigned char *d
         for (x = 0; x < ow; x++) {
             int s = src[(2*y)*w + 2*x]     + src[(2*y)*w + 2*x + 1]
                   + src[(2*y+1)*w + 2*x]   + src[(2*y+1)*w + 2*x + 1];
-            dst[y*ow + x] = (unsigned char)(s / 4);
+            /* ZAOKRUZIVANJE, ne odsecanje -- referentni tb.cpp radi (s + 2) >> 2.
+               Sa s / 4 se 33,5 % grubih piksela razlikuje od izvrsne specifikacije. */
+            dst[y*ow + x] = (unsigned char)((s + 2) >> 2);
         }
 }
 
@@ -436,8 +465,14 @@ void logic_fen(const char board[8][8], char *out, unsigned int out_sz) {
 - [ ] **Korak 4: Pusti testove i potvrdi da prolaze**
 
 ```bash
-cd "C:/Users/pc/Desktop/PSDS/src/vitis/test" && make run
+cd "C:/Users/pc/Desktop/PSDS" && bash src/vitis/test/run_tests.sh
 ```
+
+⚠️ **Ne koristiti `make` na ovoj mašini.** Nije u PATH-u (postoji samo
+`/c/Users/pc/msys64/usr/bin/make.exe`), a i pozvan punom putanjom pada sa
+`Cannot create temporary file in C:\WINDOWS\: Permission denied` — i sa
+`TMP`/`TEMP`/`TMPDIR` postavljenim, u oba oblika putanje. `Makefile` je zadržan jer radi
+u normalnom MSYS2 shell-u, ali je `run_tests.sh` (direktan `gcc`) merodavna provera.
 
 Očekivano: `SVI TESTOVI PROSLI`, izlazni kod 0.
 
