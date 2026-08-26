@@ -84,9 +84,13 @@ DDR je **512 MB** (originalni Zybo) → baferi moraju stati ispod `0x1FFFFFFF`.
 
 ## Ploča
 
-`board_part` je **`digilentinc.com:zybo:part0:B.4`** — originalni Zybo, potvrđeno VGA
-konektorom (Z7-10 ima dva HDMI-ja i nijedan VGA). Segment verzije je **ime direktorijuma**
-board fajla, ne `schema_version` iz `board.xml` (koji je `2.0` i nije verzija ploče).
+`board_part` je **`digilentinc.com:zybo:part0:2.0`** — originalni Zybo, potvrđeno VGA
+konektorom (Z7-10 ima dva HDMI-ja i nijedan VGA).
+
+**Segment verzije se ne izvodi iz strukture direktorijuma — pita se `get_board_parts`.**
+Nije ni ime direktorijuma (`zybo/B.3`, `zybo/B.4`) ni `schema_version` iz `board.xml`,
+nego `<file_version>`: B.3 → `1.0`, B.4 → `2.0`. Pogrešna vrednost pada odmah sa
+`ERROR [Board 49-71] The board_part definition was not found` — bučno, ne tiho.
 
 ⚠️ Sve brojke Koraka 7 i 8 merene su sa **Z7-10** presetom. Part `xc7z010clg400-1` je isti,
 PS preset nije — tajming i FCLK treba potvrditi. `create_bd.tcl` sam štampa `PS_CLK`,

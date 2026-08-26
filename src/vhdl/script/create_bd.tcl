@@ -22,13 +22,19 @@ set PART      xc7z010clg400-1
 # sve brojke Koraka 7 i 8 su merene sa TIM presetom -- part xc7z010clg400-1 je isti,
 # ali PS preset nije, pa se tajming i FCLK moraju PONOVO potvrditi (skripta ih stampa).
 #
-# VERZIJA JE B.4, NE "2.0". Belezke su tvrdile 2.0 -- to je schema_version iz board.xml,
-# a ne revizija ploce. Vivado 2025.2 nosi zybo/B.3 i zybo/B.4; segment verzije u
-# board_part je IME DIREKTORIJUMA. Provereno: presetima B.3 i B.4 su PS_CLK (50 MHz),
-# DDR partno (MT41K128M16 JT-125), UART1 i sva cetiri DDR_BOARD_DELAY / DQS_TO_CLK_DELAY
-# IDENTICNI -- razlika je samo u broju deklarisanih board interfejsa (860 vs 441 linija),
-# sto nas ne dotice jer koristimo samo FIXED_IO + DDR. Uzet je noviji B.4.
-set BOARD     digilentinc.com:zybo:part0:B.4
+# VERZIJA JE 2.0. Segment verzije u board_part je <file_version> iz board.xml, a NE ime
+# direktorijuma i NE schema_version. Vivado 2025.2 nosi zybo/B.3 (file_version 1.0) i
+# zybo/B.4 (file_version 2.0), pa je 2.0 upravo revizija ploce B.4 -- novija od dve.
+# Provereno `get_board_parts`, koji je jedini merodavan izvor:
+#   digilentinc.com:zybo:part0:1.0
+#   digilentinc.com:zybo:part0:2.0
+#   digilentinc.com:zybo-z7-10:part0:1.2
+#   digilentinc.com:zybo-z7-20:part0:1.2
+# (Pokusaj sa ...:part0:B.4 pada sa ERROR [Board 49-71] board_part definition not found.)
+# Preseti B.3 i B.4 imaju IDENTICNE PS_CLK (50 MHz), DDR partno (MT41K128M16 JT-125),
+# UART1 i sva cetiri DDR_BOARD_DELAY / DQS_TO_CLK_DELAY; razlika je samo u broju
+# deklarisanih board interfejsa, sto nas ne dotice (koristimo samo FIXED_IO + DDR).
+set BOARD     digilentinc.com:zybo:part0:2.0
 set BD_NAME   ncc_system
 
 puts "### repo    = $REPO"

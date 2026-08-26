@@ -10,14 +10,26 @@
 > To je **jedina blokirajuća stavka** za Korak 9. `board_part` je postavljen na
 > Korisnik je nabavio ploču i pogledao je: **jedan VGA + jedan HDMI** → originalni Zybo
 > (Z7-10 ima dva HDMI-ja i nijedan VGA). `create_bd.tcl` je prebačen na
-> **`digilentinc.com:zybo:part0:B.4`**.
+> **`digilentinc.com:zybo:part0:2.0`** — tačno kako je tabela ispod i tvrdila.
 >
-> ⚠️ **Verzija je `B.4`, ne `2.0`.** Tabela ispod je tvrdila `2.0` — to je
-> `schema_version` iz `board.xml`, a ne revizija ploče. Vivado 2025.2 nosi `zybo/B.3`
-> i `zybo/B.4`; segment verzije u `board_part` je **ime direktorijuma**. Presetima B.3
-> i B.4 su PS_CLK, DDR partno, UART1 i sva četiri `DDR_BOARD_DELAY`/`DQS_TO_CLK_DELAY`
-> identični — razlika je samo u broju deklarisanih board interfejsa, što nas ne dotiče
-> (koristimo samo FIXED_IO + DDR). Uzet je noviji B.4.
+> ⚠️ **Zabeleženo da se ne ponovi:** prvo sam ovo „ispravio" na `part0:B.4`, rezonujući
+> da je `2.0` zapravo `schema_version` iz `board.xml` a da segment verzije dolazi iz
+> imena direktorijuma (`zybo/B.3`, `zybo/B.4`). **Netačno** — Vivado je odbio:
+> `ERROR [Board 49-71] board_part definition was not found`. Segment verzije je
+> `<file_version>` iz `board.xml`: B.3 → `1.0`, B.4 → `2.0`. Dakle `2.0` **jeste**
+> revizija B.4, novija od dve. Merodavan izvor je `get_board_parts`, ne struktura
+> direktorijuma:
+>
+> ```
+> digilentinc.com:zybo:part0:1.0
+> digilentinc.com:zybo:part0:2.0
+> digilentinc.com:zybo-z7-10:part0:1.2
+> digilentinc.com:zybo-z7-20:part0:1.2
+> ```
+>
+> Preseti B.3 i B.4 imaju identične PS_CLK (50 MHz), DDR partno (MT41K128M16 JT-125),
+> UART1 i sva četiri `DDR_BOARD_DELAY`/`DQS_TO_CLK_DELAY`; razlika je samo u broju
+> deklarisanih board interfejsa, što nas ne dotiče (koristimo samo FIXED_IO + DDR).
 >
 > ⚠️ **Sve brojke Koraka 7 i 8 su merene sa Z7-10 presetom.** Part `xc7z010clg400-1` je
 > isti, ali PS preset nije — tajming i FCLK se moraju **ponovo potvrditi** pri prvom
@@ -196,7 +208,7 @@
 > ## Otvoreno / nepotvrđeno
 >
 > 1. ~~**Koja je tačno ploča**~~ — **RAZREŠENO 2026-08-26: originalni Zybo**
->    (`digilentinc.com:zybo:part0:B.4`), potvrđeno VGA konektorom na ploči.
+>    (`digilentinc.com:zybo:part0:2.0`), potvrđeno VGA konektorom na ploči.
 >    Istorijski zapis pitanja: `board_part` je bio `digilentinc.com:zybo-z7-10:part0:1.2`,
 >    ali korisnik nije imao ploču pred sobom. Part `xc7z010clg400-1` je siguran u oba
 >    slučaja; razlikuje se samo PS preset. Originalni Zybo: **VGA + 1× HDMI**, PS_CLK
