@@ -1,42 +1,55 @@
 #include "xil_printf.h"
-#include "xil_io.h"
+#include "xtime_l.h"
 #include "ncc_hw.h"
-#include "data.h"
+#include "ncc_app.h"
+#include "ncc_logic.h"
 
-#define GOLD_IW 90
-#define GOLD_IH 90
-#define GOLD_TW 25
-#define GOLD_TH 15
-#define GOLD_RW (GOLD_IW - GOLD_TW + 1)          /* 66 */
-#define GOLD_RH (GOLD_IH - GOLD_TH + 1)          /* 76 */
-#define GOLD_N  (GOLD_RW * GOLD_RH)              /* 5016 */
-#define GOLD_EXPECT_SCORE 0x80000000u
-#define GOLD_EXPECT_IDX   956u                   /* v=14, u=32 -> 14*66 + 32 */
+static const char FEN_MAP[12] = {'Q','N','K','B','P','R','q','n','k','b','p','r'};
+/* Zvanicni FEN za board2.txt. Izvor: src/hls/test_real_data.cpp:51 (GOLDEN_FEN),
+   isti koji je C model iz Koraka 1 reprodukovao 32/32. Provereno: 32 figure. */
+static const char FEN_EXPECT[] = "rnbqkbnr/pp5p/4ppp1/2pp4/5P2/1P1BPN2/P1PPQ1PP/RNB1K2R";
 
-static int phase3(const ncc_dev_t *d, const char *name) {
-    u32 score, idx;
-
-    if (ncc_load_image(d, GOLD_SEG,  8100u)) { xil_printf("%s: load_image odbio\r\n", name); return 0; }
-    if (ncc_load_tmpl (d, GOLD_TMPL,  375u)) { xil_printf("%s: load_tmpl odbio\r\n",  name); return 0; }
-    ncc_set_dims(d, GOLD_IW, GOLD_IH, GOLD_TW, GOLD_TH);
-    ncc_start(d);
-    if (ncc_wait_done(d, 2000000u)) { xil_printf("%s: TIMEOUT\r\n", name); return 0; }
-
-    score = ncc_best_score(d, (u32)GOLD_N, &idx);
-    xil_printf("%s: skor 0x%08x @ idx %d (u=%d v=%d)\r\n",
-               name, score, (int)idx, (int)(idx % GOLD_RW), (int)(idx / GOLD_RW));
-
-    if (score != GOLD_EXPECT_SCORE) { xil_printf("  GRESKA: ocekivano 0x80000000\r\n"); return 0; }
-    if (idx   != GOLD_EXPECT_IDX)   { xil_printf("  GRESKA: ocekivan idx 956\r\n");     return 0; }
-    return 1;
-}
+static char board[8][8];
+static char fen[128];
 
 int main(void) {
-    int ok;
-    xil_printf("\r\n=== NCC akcelerator, FAZA 4 (prenosi procesorom) (zlatni vektor) ===\r\n");
-    ncc_hw_init();
-    ok  = phase3(&NCC0, "ncc0");
-    ok &= phase3(&NCC1, "ncc1");
-    xil_printf(ok ? "FAZA 4 (prenosi procesorom): PROSLA\r\n" : "FAZA 4 (prenosi procesorom): PALA\r\n");
+    int m, n, occ = 0;
+    XTime t0, t1;
+
+    xil_printf("\r\n=== NCC akcelerator, FAZA 5 (pun tok) ===\r\n");
+    if (ncc_hw_init()) { xil_printf("init pao\r\n"); while (1) {} }
+
+    for (m = 0; m < 8; m++) for (n = 0; n < 8; n++) board[m][n] = ' ';
+
+    XTime_GetTime(&t0);
+    for (m = 0; m < 8; m++) {
+        for (n = 0; n < 8; n++) {
+            square_t s = app_scan_square(m, n);
+            if (!s.occupied) continue;
+            occ++;
+            if (s.best_tmpl >= 0) board[m][n] = FEN_MAP[s.best_tmpl];
+            xil_printf("(%d,%d) %s tmpl %d skor 0x%08x\r\n",
+                       m, n, s.is_white ? "bela" : "crna", s.best_tmpl, s.best_score);
+        }
+    }
+    XTime_GetTime(&t1);
+
+    logic_fen((const char (*)[8])board, fen, sizeof fen);
+    xil_printf("\r\nzauzetih polja: %d\r\n", occ);
+    xil_printf("FEN:       %s\r\n", fen);
+    xil_printf("ocekivano: %s\r\n", FEN_EXPECT);
+
+    {
+        u64 ticks = (u64)(t1 - t0);
+        u32 ms = (u32)((ticks * 1000u) / COUNTS_PER_SECOND);
+        xil_printf("vreme: %d ms (%d tikova)\r\n", (int)ms, (int)ticks);
+    }
+
+    {
+        int i, same = 1;
+        for (i = 0; fen[i] || FEN_EXPECT[i]; i++)
+            if (fen[i] != FEN_EXPECT[i]) { same = 0; break; }
+        xil_printf(same ? "FAZA 5: PROSLA\r\n" : "FAZA 5: PALA -- FEN se ne poklapa\r\n");
+    }
     while (1) { }
 }
