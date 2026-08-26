@@ -2124,24 +2124,42 @@ vrednost iznosi 1000/11&nbsp;=&nbsp;90,909&nbsp;MHz. Odstupanje od nominalnih
 100&nbsp;MHz je <b>9,1&nbsp;%</b>, dakle unutar granice od 20&nbsp;% koju zadatak
 dopušta za razliku između sistemskog modela i realizacije.</p>
 
-<p class="noind"><b>Ograničenje je integracija, ne jezgro.</b> Ovo treba reći precizno,
-jer je razlika bitna. Samostalno jezgro <b>zatvara</b> i 100&nbsp;MHz, sa rezervom od
-0,146&nbsp;ns (odeljak 7.3). Ceo sistem na istom ograničenju daje &minus;0,232&nbsp;ns.
-Kritična putanja u sistemu je adresna putanja <i>unutar</i> jezgra &mdash; ista logika
-koja samostalno nije ni blizu kritične &mdash; a postaje vezujuća tek pod pritiskom
-razmeštaja i zagušenja rutiranja u dizajnu koji zauzima trećinu uređaja. Dakle RTL je
-zadovoljavajući; cenu plaća integracija.</p>
+<p class="noind"><b>Koliko fali do 100&nbsp;MHz.</b> Kontrolno merenje istog dizajna sa
+ograničenjem od 10&nbsp;ns daje rezervu od <b>&minus;0,054&nbsp;ns</b>, uz svega
+<b>6 od 15.481</b> krajnjih tačaka koje krše ograničenje (ukupno prekoračenje
+&minus;0,209&nbsp;ns). Ostvariva frekvencija integrisanog sistema je dakle
+<b>oko 99,5&nbsp;MHz</b>: sistemu za pun takt nedostaje pedeset pikosekundi.
+Radna tačka je ipak postavljena na 90,909&nbsp;MHz jer je to najbliža vrednost koju PLL
+procesorskog sistema može da isporuči ispod granice zatvaranja &mdash; deli ulaznu
+frekvenciju celim brojem, pa između 90,909 i 100&nbsp;MHz nema ostvarive vrednosti.</p>
 
-<p class="noind"><b>Poluga koja nije iskorišćena.</b> Adresa piksela u unutrašnjoj petlji
-računa se u svakom taktu kao
-(<span class="mono">v</span>&nbsp;+&nbsp;<span class="mono">y</span>)&nbsp;&middot;&nbsp;<span class="mono">img_w</span>
-+&nbsp;(<span class="mono">u</span>&nbsp;+&nbsp;<span class="mono">x</span>), dakle kroz
-množač. Mogla bi se računati <b>inkrementalno</b> &mdash; adresa u registru, uz korak
-+1 unutar reda i +(<span class="mono">img_w</span>&nbsp;&minus;&nbsp;<span class="mono">tmp_w</span>&nbsp;+&nbsp;1)
-na prelasku reda &mdash; što izbacuje množač iz petlje i ne menja latenciju. Nije
-primenjeno iz dva razloga: dizajn već zadovoljava rubriku, a to bi bio treći zahvat u
-verifikovano jezgro. Uz to dobitak nije zagarantovan, jer je oko 62&nbsp;% te putanje
-rutiranje, a ne logika &mdash; izbacivanje množača skraćuje samo logički deo.</p>
+<p class="noind"><b>Šta je vezujuće zavisi od ograničenja.</b> Na 11&nbsp;ns kritična je
+adresna putanja do memorije slike; na 10&nbsp;ns to više nije ona, nego
+<span class="mono">sum_num_reg[22]</span>&nbsp;&rarr;&nbsp;<span class="mono">num_sq_reg[51]</span>
+&mdash; kvadriranje brojioca pred deliocem, 9,825&nbsp;ns kroz 13 nivoa logike. To je
+<i>ista</i> putanja koju samostalno jezgro ima kao kritičnu na 10&nbsp;ns (odeljak 7.3).
+Alat na strožem ograničenju gradi drugačiju implementaciju istog RTL-a, pa se i vezujuća
+putanja premesti; zato se rezerva ne sme prevoditi računski sa jednog ograničenja na
+drugo, niti se uzrok sme pripisati iz jednog merenja.</p>
+
+<p class="noind"><b>Ograničenje je jezgro, a ne integracija.</b> Ranija verzija ovog
+odeljka tvrdila je suprotno &mdash; da RTL nije problem nego cena integracije. Kontrolno
+merenje to <b>obara</b>: na 10&nbsp;ns sistem se zaustavlja na putanji koja je kritična i
+u samostalnom jezgru, a cena integracije je razlika između +0,146&nbsp;ns samostalno i
+&minus;0,054&nbsp;ns u sistemu, dakle oko 0,20&nbsp;ns.</p>
+
+<p class="noind"><b>Poluga koja nije iskorišćena.</b> Kvadriranje brojioca pred deliocem
+moglo bi da dobije još jedan protočni stepen, po ugledu na dva već izvedena preseka
+(odeljak 10.5). Time bi se putanja od 9,825&nbsp;ns podelila na dva takta i sistem bi
+zatvorio 100&nbsp;MHz, uz cenu od jednog takta po prozoru &mdash; oko 0,2&nbsp;%
+latencije. Nije primenjeno jer dizajn već zadovoljava rubriku, a bio bi to treći zahvat u
+verifikovano jezgro.</p>
+
+<p class="noind">Ranije je kao poluga navođeno <b>inkrementalno računanje adrese</b>
+(adresa u registru uz korak, umesto množenja u svakom taktu). Ta mera je predložena na
+osnovu merenja na 11&nbsp;ns, gde adresna putanja jeste vezujuća. Kontrolno merenje na
+10&nbsp;ns pokazuje da tamo <b>ne bi pomogla</b>, jer adresna putanja na tom ograničenju
+nije kritična. Zadržava se kao mera za smanjenje logike, ne kao put do 100&nbsp;MHz.</p>
 
 <h2>10.4. Propusnost sistema</h2>
 
@@ -2203,7 +2221,9 @@ razlikovati. Zamena krosbara deljenom magistralom smanjila je sam interkonekt sa
 1.616&nbsp;LUT, a sužavanje porta spustilo je zauzeće celog sistema sa 55,0&nbsp;% na
 35,6&nbsp;% (9.681 &rarr; 6.261&nbsp;LUT), jer je uklonilo šest konvertora širine. Ali
 izmerena vremenska rezerva se pri sužavanju porta pomerila samo sa &minus;0,233 na
-&minus;0,232&nbsp;ns, dakle praktično nimalo.</p>
+&minus;0,232&nbsp;ns, dakle praktično nimalo. (Obe vrednosti su iz istog kontrolnog para
+merenja na 10&nbsp;ns; aktuelna rezerva sistema na tom ograničenju je &minus;0,054&nbsp;ns
+&mdash; videti odeljak 10.3.)</p>
 
 <p class="noind">Brojke u ovoj tabeli namerno se razlikuju od Tabele 19 (6.261 naspram
 6.274&nbsp;LUT). Ovde je reč o <b>kontrolisanom poređenju</b>: obe vrednosti, i pre i
@@ -2306,9 +2326,12 @@ nivou celog sistema:</p>
 zauzeća, i to je jedini resurs bez rezerve, a po njemu smo slabiji od referentnog rešenja.
 Uzrok je 32-bitna reč integralne slike kod koje je dovoljno 21 bit; suženje bi oslobodilo
 oko šest blokova (odeljak 10.2). Druga je radni takt: 90,909&nbsp;MHz umesto nominalnih
-100, dakle odstupanje od 9,1&nbsp;%. Pri tome samostalno jezgro 100&nbsp;MHz
-<i>zatvara</i> &mdash; ograničenje unosi integracija, kroz pritisak razmeštaja i zagušenje
-rutiranja, a ne RTL (odeljak 10.3).</p>
+100, dakle odstupanje od 9,1&nbsp;%. Sistemu za pun takt nedostaje svega
+<b>0,054&nbsp;ns</b>, na 6 od 15.481 krajnjih tačaka &mdash; ostvarivo je oko
+99,5&nbsp;MHz &mdash; ali PLL procesorskog sistema deli ulaznu frekvenciju celim brojem,
+pa između 90,909 i 100&nbsp;MHz nema ostvarive vrednosti. Vezujuća je putanja kvadriranja
+pred deliocem, ista koja ograničava i samostalno jezgro; jedan dodatni protočni stepen na
+njoj zatvorio bi 100&nbsp;MHz uz oko 0,2&nbsp;% latencije (odeljak 10.3).</p>
 
 <p>Preostaje generisanje konfiguracione datoteke i provera na realnoj ploči, uz softver
 prenesen iz izvršne specifikacije. Interfejs koji taj softver treba da koristi &mdash;

@@ -36,6 +36,8 @@ set PART      xc7z010clg400-1
 # deklarisanih board interfejsa, sto nas ne dotice (koristimo samo FIXED_IO + DDR).
 set BOARD     digilentinc.com:zybo:part0:2.0
 set BD_NAME   ncc_system
+# Trazeni PL takt u MHz. 95 -> PS PLL daje 1000/11 = 90,909 MHz (radna tacka).
+if {![info exists NCC_FCLK]} { set NCC_FCLK 95 }
 
 puts "### repo    = $REPO"
 puts "### part    = $PART"
@@ -96,17 +98,31 @@ apply_bd_automation -rule xilinx.com:bd_rule:processing_system7 \
 # (m00_couplers/auto_ds, 10,710 ns od cega 10,130 ns rutiranja).
 #
 # TAKT: trazeno 95 MHz -> PS PLL daje 1000/11 = 90,909 MHz.
-# 100 MHz NE zatvara: izmereno WNS -0,233 ns sa konvertorima i -0,232 ns bez njih,
-# tj. uklanjanje konvertora nije pomoglo timingu (donelo je samo povrsinu).
-# Vezujuca putanja je NASA: state_reg -> img_mem/ADDRBWRADDR, tj. kombinaciono
-# racunanje adrese (v+y)*img_w + (u+x) do adresnog ulaza BRAM-a, ~62% rutiranje.
-# Fmax integrisanog sistema ~97,7 MHz. Odstupanje 90,909 od 100 MHz je 9,1%,
-# rubrika Koraka 8e dozvoljava 20%.
+#
+# 100 MHz NE zatvara, ali za malo: WNS -0,054 ns, samo 6 od 15.481 krajnjih tacaka
+# (izmereno 2026-08-26 sa Zybo presetom, NCC_FCLK 100). Fmax sistema ~99,5 MHz.
+# Radna tacka je svejedno 90,909 jer PS PLL deli celim brojem -- izmedju 90,909 i 100
+# nema ostvarive vrednosti. Odstupanje 9,1%, rubrika Koraka 8e dozvoljava 20%.
+#
+# VEZUJUCA PUTANJA ZAVISI OD OGRANICENJA:
+#   na 11 ns  -> adresna: v_reg[1] -> img_mem/ADDRBWRADDR[14]
+#   na 10 ns  -> sum_num_reg[22] -> num_sq_reg[51], kvadriranje pred deliocem,
+#                9,825 ns kroz 13 nivoa; ISTA putanja koju golo jezgro ima na 10 ns.
+# Alat na strozem ogranicenju gradi drugu implementaciju istog RTL-a.
+#
+# ISPRAVLJENO 2026-08-26 -- ovde je ranije stajalo WNS -0,232 ns i tvrdnja da je
+# vezujuca adresna putanja i na 10 ns. Oboje je bilo sa Z7-10 presetom i sa 11 ns
+# merenja prenesenog na 10 ns. Poluga za punih 100 MHz NIJE inkrementalna adresa
+# (ta putanja na 10 ns nije kriticna) nego jos jedan protocni stepen na kvadriranju.
+# Trazeni FCLK je parametar: `set NCC_FCLK 100` PRE source-ovanja meri na 10 ns.
+# Isti razlog kao kod run_synth_core.tcl -- rezerva se NE prevodi aritmeticki izmedju
+# ogranicenja takta, pa se Fmax meri na ogranicenju koje se tvrdi (videti BUGS.md).
+#
 # Ako se ikad zatrazi punih 100 MHz: sledeca poluga je INKREMENTALNO racunanje
 # adrese u ncc_core (adresa u registru + korak, umesto mnozenja svaki takt) --
 # izbacuje mnozac iz unutrasnje petlje. To je treci zahvat u verifikovano jezgro.
 set_property -dict [list \
-    CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ {95} \
+    CONFIG.PCW_FPGA0_PERIPHERAL_FREQMHZ $NCC_FCLK \
     CONFIG.PCW_USE_M_AXI_GP0            {1}  \
     CONFIG.PCW_USE_S_AXI_HP0            {1}  \
     CONFIG.PCW_S_AXI_HP0_DATA_WIDTH     {32} \

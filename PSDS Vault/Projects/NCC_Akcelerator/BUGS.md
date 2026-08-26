@@ -193,6 +193,56 @@ uzroka uporediti putanje na ISTOM taktu.** Izmena je ipak zadržana — zbog pov
 
 ---
 
+## PS preset NIJE neutralan za timing — i putanja se premešta  [ISPRAVKA, 2026-08-26]
+
+Kad je `board_part` prebačen sa `zybo-z7-10:part0:1.2` na stvarnu ploču
+(`zybo:part0:2.0`), procenio sam da promena preseta ne može bitno pomeriti timing jer
+preset dira MIO, DDR kontroler i PLL, a kritična putanja je u PL-u. **Na 11 ns to je
+tačno** (+0,170 → +0,181 ns, 13 LUT razlike). **Na 10 ns nije:**
+
+| Ograničenje | Z7-10 preset | Zybo preset | vezujuća putanja (Zybo) |
+|---|---|---|---|
+| 11,0 ns | +0,170 ns | +0,181 ns | adresna: `v_reg[1]` → `img_mem/ADDRBWRADDR[14]` |
+| **10,0 ns** | **−0,232 ns** | **−0,054 ns** | **`sum_num_reg[22]` → `num_sq_reg[51]`** |
+
+Razlika na 10 ns je **0,178 ns**, šesnaest puta veća nego na 11 ns. Predvideo sam
+≈ −0,22 ns; izmereno −0,054 ns.
+
+**Dve posledice, obe zapisane u dokumentaciji.**
+
+1. **Fmax sistema je ~99,5 MHz, ne ~97,7.** Sistemu fali 0,054 ns i **6 od 15.481**
+   krajnjih tačaka. Radna tačka ostaje 90,909 jer PS PLL deli celim brojem — između
+   90,909 i 100 MHz nema ostvarive vrednosti.
+
+2. **„Ograničenje je integracija, ne jezgro" je bilo NETAČNO.** Na 10 ns sistem staje na
+   putanji koja je kritična i u samostalnom jezgru (isto odredište `num_sq_reg[51]`,
+   Korak 5). Cena integracije je +0,146 samostalno naspram −0,054 u sistemu, dakle
+   ~0,20 ns — realna, ali nije uzrok.
+
+**Preporuka u §10.3 je bila pogrešna.** Dokument je navodio *inkrementalno računanje
+adrese* kao polugu za punih 100 MHz. Ta mera je izvedena iz merenja na **11 ns**, gde
+adresa jeste vezujuća, i prenesena na 10 ns bez provere. Na 10 ns adresna putanja nije
+kritična, pa **ne bi pomogla**. Prava poluga je još jedan protočni stepen na kvadriranju
+pred deliocem (~0,2 % latencije).
+
+**Peti put isti obrazac** — zaključak izveden iz jednog merenja, bez kontrolnog. Ovaj put
+kontrolno merenje je pušteno tek kad je korisnik tražio, i odmah je oborilo dve tvrdnje.
+Pouka je ista kao u pravilu ispod, samo prošireni domet: **ne prenosi se ni rezerva, ni
+identitet kritične putanje, ni preporuka izvedena iz nje** — ništa što je mereno na
+jednom ograničenju ne važi na drugom bez ponovnog merenja.
+
+Reprodukcija: `NCC_FCLK` je sada parametar u `create_bd.tcl` (podrazumevano 95).
+Merenje na 10 ns u odvojenom projektu, da radna tačka i bitstream prežive:
+
+```tcl
+set NCC_PROJ_DIR       C:/ncc100
+set NCC_FCLK           100
+set NCC_SKIP_BITSTREAM 1
+source src/vhdl/script/run_impl.tcl
+```
+
+---
+
 ## Rezerva se NE prevodi aritmetički između ograničenja takta  [PRAVILO, 2026-07-26]
 
 Merenje golog jezgra je prvo pušteno samo na 11 ns, a Fmax i „rezerva prema 100 MHz"

@@ -141,8 +141,18 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 > `axi_interconnect_0` 1.616 LUT; `axi_cdma_0` 807 LUT.
 >
 > **WNS +0,181 ns na 11,0 ns → timing ZATVARA na 90,909 MHz** (traženo 95, PS PLL
-> daje 1000/11). Fmax integrisanog sistema ~97,7 MHz; 100 MHz ne zatvara
-> (WNS −0,232 ns). Odstupanje 9,1% — rubrika 8e dozvoljava 20%.
+> daje 1000/11). **Fmax integrisanog sistema ~99,5 MHz** — 100 MHz ne zatvara, ali za
+> svega **−0,054 ns** i 6 od 15.481 krajnjih tačaka (kontrolno merenje 2026-08-26,
+> `NCC_FCLK 100`). Radna tačka je 90,909 jer PS PLL deli celim brojem — između 90,909 i
+> 100 MHz nema ostvarive vrednosti. Odstupanje 9,1% — rubrika 8e dozvoljava 20%.
+>
+> ⚠️ **Vezujuća putanja zavisi od ograničenja:** na 11 ns adresna
+> (`v_reg[1]` → `img_mem/ADDRBWRADDR[14]`), na 10 ns `sum_num_reg[22]` → `num_sq_reg[51]`
+> (kvadriranje pred deliocem) — ista putanja koju golo jezgro ima na 10 ns.
+> ~~„Ograničenje je integracija, ne jezgro"~~ **POVUČENO** — na 10 ns sistem staje na
+> putanji jezgra; integracija košta ~0,20 ns, ali nije uzrok. Poluga za 100 MHz **nije**
+> inkrementalna adresa (ta putanja na 10 ns nije kritična) nego još jedan protočni stepen
+> na kvadriranju (~0,2% latencije). Videti `BUGS.md`.
 >
 > Da bi zatvorio, trebalo je četiri stvari: MAC pipeline + registar pred delilac u
 > `ncc_core` (FSM 21→23 stanja, latencija +0,41%), SmartConnect→AXI Interconnect
