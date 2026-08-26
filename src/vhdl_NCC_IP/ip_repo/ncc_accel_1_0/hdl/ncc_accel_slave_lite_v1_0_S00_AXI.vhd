@@ -134,11 +134,28 @@ architecture arch_imp of ncc_accel_slave_lite_v1_0_S00_AXI is
 	signal byte_index	: integer;
 
 	 signal mem_logic  : std_logic_vector(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
-	 -- Prihvacen upisni beat: W uz VEC prihvacen AW. Generisani kontroler drzi
+	 -- Prihvacen upisni beat: W uz vec prihvacen AW. Generisani kontroler je drzao
 	 -- axi_wready na '1' od Idle nadalje, a upisni proces je okidao na golo
 	 -- S_AXI_WVALID -- pa je W koji stigne pre AW (AXI to dozvoljava) upisivao
 	 -- registar dekodovan po STAROJ axi_awaddr, i to iznova svaki takt dok WVALID
-	 -- stoji. Nadjeno u code review-u Koraka 8.
+	 -- stoji. Nadjeno u code review-u Koraka 8 -- ta popravka (wr_beat nize)
+	 -- je resila samo posledicu po podatke.
+	 --
+	 -- PROTOKOLARNI BUG (dokazan na ploci, JTAG): axi_wready='1' vec u stanju
+	 -- Idle/Waddr znaci da slave prihvata W beat i pre nego sto je AW uopste
+	 -- prihvacen. Ako master posalje W pre AW (legalan redosled po AXI4
+	 -- specifikaciji), handshake se zavrsi na W kanalu (WVALID='1' i
+	 -- WREADY='1') a da FSM (koji je jos u Waddr, cekajuci AW) taj beat nigde
+	 -- ne zabelezi. Kad kasnije stigne AW, FSM predje u Wdata i ceka W koji se
+	 -- vec dogodio i nece se ponoviti -- BVALID se nikad ne izda i master
+	 -- (npr. CPU preko JTAG-a) zauvek visi na cekanju odgovora.
+	 --
+	 -- POPRAVKA: axi_wready se sada digne na '1' tek kad se AW prihvati (ulazak
+	 -- u Wdata), a ne u Idle/Waddr. Time je W nemoguce prihvatiti pre AW --
+	 -- primenjen je legitiman AXI backpressure (WREADY='0' dok AW ne stigne)
+	 -- umesto tihog gubljenja beat-a. Sva tri redosleda (AW pa W, W pa AW,
+	 -- AW+W isti takt) sada rade ispravno, cena je jedan takt kasnjenja po
+	 -- upisu -- zanemarljivo za par upisa u kontrolne registre po pozivu NCC-a.
 	 signal wr_beat    : std_logic;
 
 	 --State machine local parameters
@@ -160,14 +177,16 @@ begin
 	S_AXI_ARREADY	<= axi_arready;
 	S_AXI_RRESP	<= axi_rresp;
 	S_AXI_RVALID	<= axi_rvalid;
-	    wr_beat <= '1' when (S_AXI_WVALID = '1' and axi_wready = '1' and
-	                         ((state_write = Waddr and S_AXI_AWVALID = '1' and axi_awready = '1')
-	                          or state_write = Wdata))
+	    -- Sa novim automatom axi_wready je '1' samo u stanju Wdata (posle prihvacenog
+	    -- AW), pa je upis moguc samo tamo -- grana za Waddr vise nije dostizna po
+	    -- konstrukciji (wready='0' u Waddr) i uklonjena je da ne sugerise da se upis
+	    -- moze desiti pre nego sto je AW prihvacen.
+	    wr_beat <= '1' when (state_write = Wdata and S_AXI_WVALID = '1' and axi_wready = '1')
 	               else '0';
-	    -- AWADDR se uzima samo u taktu prihvatanja AW; inace vazi zapamcena axi_awaddr.
-	    mem_logic     <= S_AXI_AWADDR(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB)
-	                       when (state_write = Waddr and S_AXI_AWVALID = '1' and axi_awready = '1')
-	                     else axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
+	    -- AWADDR je uvek vec zapamcen u axi_awaddr pre nego sto se udje u Wdata
+	    -- (upisuje se pri prihvatanju AW, u prelazu Waddr -> Wdata), pa upis u
+	    -- mem_logic uvek koristi zapamcenu adresu.
+	    mem_logic     <= axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
 
 	-- === NCC omotac: kontrola ka ncc_core ===
 	img_w <= slv_reg0(7 downto 0);
@@ -202,46 +221,50 @@ begin
 	          axi_bvalid <= '0';                                       
 	          axi_bresp <= (others => '0');                                       
 	          state_write <= Idle;                                       
-	        else                                       
+	        else
+	          -- BVALID se brise cim ga master prihvati (BREADY='1'), BEZ OBZIRA
+	          -- na stanje automata. Mora stajati PRE case-a da bi eventualna
+	          -- dodela axi_bvalid <= '1' u Wdata (kad se upis zavrsava u istom
+	          -- taktu kad se prethodni odgovor prihvata) imala prioritet --
+	          -- inace, ako AW za SLEDECI upis stigne u istom taktu kad master
+	          -- ceka/prihvata BVALID prethodnog upisa (grana Waddr sa
+	          -- AWVALID='1'), stari kod nikad nije proveravao BREADY u toj
+	          -- grani i bvalid bi ostao zaglavljen na '1' -- master bi tada
+	          -- video isti BRESP dva puta, za transakciju koja jos nije ni
+	          -- zavrsena. Nadjeno u recenziji ove popravke.
+	          if (axi_bvalid = '1' and S_AXI_BREADY = '1') then
+	            axi_bvalid <= '0';
+	          end if;
 	          case (state_write) is                                       
-	             when Idle =>		--Initial state inidicating reset is done and ready to receive read/write transactions                                       
-	               if (S_AXI_ARESETN = '1') then                                       
-	                 axi_awready <= '1';                                       
-	                 axi_wready <= '1';                                       
-	                 state_write <= Waddr;                                       
-	               else state_write <= state_write;                                       
-	               end if;                                       
-	             when Waddr =>		--At this state, slave is ready to receive address along with corresponding control signals and first data packet. Response valid is also handled at this state                                       
-	               if (S_AXI_AWVALID = '1' and axi_awready = '1') then                                       
-	                 axi_awaddr <= S_AXI_AWADDR;                                       
-	                 if (S_AXI_WVALID = '1') then
-	                   axi_awready <= '1';                                       
-	                   state_write <= Waddr;                                       
-	                   axi_bvalid <= '1';                                       
-	                 else                                       
-	                   axi_awready <= '0';                                       
-	                   state_write <= Wdata;                                       
-	                   if (S_AXI_BREADY = '1' and axi_bvalid = '1') then                                       
-	                     axi_bvalid <= '0';                                       
-	                   end if;                                       
-	                 end if;                                       
-	               else                                        
-	                 state_write <= state_write;                                       
-	                 if (S_AXI_BREADY = '1' and axi_bvalid = '1') then                                       
-	                   axi_bvalid <= '0';                                       
-	                 end if;                                       
-	               end if;                                       
-	             when Wdata =>		--At this state, slave is ready to receive the data packets until the number of transfers is equal to burst length                                       
-	               if (S_AXI_WVALID = '1') then
-	                 state_write <= Waddr;                                       
-	                 axi_bvalid <= '1';                                       
-	                 axi_awready <= '1';                                       
-	               else                                       
-	                 state_write <= state_write;                                       
-	                 if (S_AXI_BREADY ='1' and axi_bvalid = '1') then                                       
-	                   axi_bvalid <= '0';                                       
-	                 end if;                                       
-	               end if;                                       
+             when Idle =>		--Initial state inidicating reset is done and ready to receive read/write transactions
+               if (S_AXI_ARESETN = '1') then
+                 axi_awready <= '1';
+                 axi_wready <= '0';
+                 state_write <= Waddr;
+               else state_write <= state_write;
+               end if;
+             when Waddr =>		--Slave ceka AW; W se NE prihvata ovde (axi_wready='0') da se ne
+                                --bi izgubio W koji stigne pre AW (protokolarni bug, vidi komentar
+                                --uz wr_beat gore).
+               if (S_AXI_AWVALID = '1' and axi_awready = '1') then
+                 axi_awaddr  <= S_AXI_AWADDR;
+                 axi_awready <= '0';
+                 axi_wready  <= '1';
+                 state_write <= Wdata;
+               else
+                 state_write <= state_write;
+               end if;
+             when Wdata =>		--AW je vec prihvacen (axi_awaddr zapamcen); ceka se W. Pokriva
+                                --sva tri redosleda (AW pa W, W pa AW, AW+W isti takt) jer se W
+                                --uvek prihvata tek ovde.
+               if (S_AXI_WVALID = '1') then
+                 state_write <= Waddr;
+                 axi_bvalid  <= '1';
+                 axi_wready  <= '0';
+                 axi_awready <= '1';
+               else
+                 state_write <= state_write;
+               end if;
 	             when others =>      --reserved                                       
 	               axi_awready <= '0';                                       
 	               axi_wready <= '0';                                       
