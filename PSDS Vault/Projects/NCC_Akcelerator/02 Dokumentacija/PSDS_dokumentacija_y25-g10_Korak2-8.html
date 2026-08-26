@@ -245,9 +245,17 @@ kao <b>izvršna specifikacija</b>: RTL model mora dati bit-identičan rezultat.<
 
 <h2>1.3. Ciljna platforma i korišćeni alati</h2>
 
-<p>Ciljna platforma je razvojna ploča <b>Zybo Z7-10</b> sa uređajem
+<p>Ciljna platforma je razvojna ploča <b>Digilent Zybo</b> sa uređajem
 <b>xc7z010clg400-1</b> (Zynq-7000). Uređaj raspolaže sa 17.600 LUT, 35.200 flip-flopova,
-80 DSP48E1 blokova i 60 blokova RAMB36.</p>
+80 DSP48E1 blokova i 60 blokova RAMB36. Ploča nosi <b>512&nbsp;MB</b> DDR3 memorije
+(MT41K128M16 JT-125) i kristal procesorskog sistema od 50&nbsp;MHz; u alatu joj odgovara
+oznaka <span class="mono">digilentinc.com:zybo:part0:2.0</span>.</p>
+
+<p class="noind">Napomena o varijanti ploče: postoji i novija <span class="mono">Zybo
+Z7-10</span> sa istim uređajem, ali drugačijim procesorskim sistemom (kristal
+33,333&nbsp;MHz, 1&nbsp;GB DDR3). Razlikuju se na oko &mdash; originalni Zybo ima
+<b>VGA</b> i jedan HDMI, dok Z7-10 ima dva HDMI izlaza i nijedan VGA. Sve brojke u ovom
+dokumentu merene su sa presetom <b>originalnog Zybo</b>.</p>
 
 <p class="noind">Napomena o oznaci uređaja: dokumentacija prethodne faze projekta navodi
 <span class="mono">xc7z010-clg225-2</span>, ali to je bio podrazumevani uređaj alata
@@ -2055,7 +2063,7 @@ daje rezervu od &minus;0,714&nbsp;ns, a strategija sa optimizacijom posle rutira
     <tr><th>Resurs</th><th class="n">Utrošeno</th><th class="n">Raspoloživo</th><th class="n">Iskorišćenost</th></tr>
   </thead>
   <tbody>
-    <tr><td>Slice LUT</td><td class="n">6.261</td><td class="n">17.600</td><td class="n"><b>35,57 %</b></td></tr>
+    <tr><td>Slice LUT</td><td class="n">6.274</td><td class="n">17.600</td><td class="n"><b>35,65 %</b></td></tr>
     <tr><td>Slice registri (FF)</td><td class="n">5.024</td><td class="n">35.200</td><td class="n">14,27 %</td></tr>
     <tr><td>Block RAM (ukupno)</td><td class="n">39</td><td class="n">60</td><td class="n"><b>65,00 %</b></td></tr>
     <tr><td>DSP48E1</td><td class="n">18</td><td class="n">80</td><td class="n">22,50 %</td></tr>
@@ -2098,11 +2106,11 @@ instanca.</p>
   </thead>
   <tbody>
     <tr><td>Radni takt</td><td class="n"><b>90,909 MHz</b> (period 11,000 ns)</td></tr>
-    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+0,170 ns</b></td></tr>
-    <tr><td>Najgora rezerva za zadržavanje (WHS)</td><td class="n">+0,025 ns</td></tr>
-    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n"><b>0 od 15.459</b></td></tr>
-    <tr><td>Kritična putanja</td><td class="n"><span class="mono">ncc1/core_inst/y_reg[0]</span> &rarr;<br>
-        <span class="mono">ncc1/ms_inst/img_mem/ADDRBWRADDR[13]</span></td></tr>
+    <tr><td>Najgora vremenska rezerva (WNS)</td><td class="n"><b>+0,181 ns</b></td></tr>
+    <tr><td>Najgora rezerva za zadržavanje (WHS)</td><td class="n">+0,034 ns</td></tr>
+    <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n"><b>0 od 15.460</b></td></tr>
+    <tr><td>Kritična putanja</td><td class="n"><span class="mono">ncc0/core_inst/v_reg[1]</span> &rarr;<br>
+        <span class="mono">ncc0/ms_inst/img_mem/ADDRBWRADDR[14]</span></td></tr>
     <tr><td>Provera pravila projektovanja</td><td class="n">bez kritičnih upozorenja</td></tr>
   </tbody>
 </table>
@@ -2197,6 +2205,14 @@ razlikovati. Zamena krosbara deljenom magistralom smanjila je sam interkonekt sa
 izmerena vremenska rezerva se pri sužavanju porta pomerila samo sa &minus;0,233 na
 &minus;0,232&nbsp;ns, dakle praktično nimalo.</p>
 
+<p class="noind">Brojke u ovoj tabeli namerno se razlikuju od Tabele 19 (6.261 naspram
+6.274&nbsp;LUT). Ovde je reč o <b>kontrolisanom poređenju</b>: obe vrednosti, i pre i
+posle sužavanja porta, izmerene su u istom toku i sa istim presetom, pa je razlika između
+njih pripisiva isključivo toj izmeni. Tabela 19 daje aktuelno stanje sistema, izmereno
+kasnije sa presetom stvarne ploče. Prenošenje jedne brojke u drugo poređenje pokvarilo bi
+kontrolu, pa se to ovde ne radi &mdash; razlika od 13&nbsp;LUT (0,2&nbsp;%) potiče od
+promene preseta, ne od neke izmene u projektu.</p>
+
 <p class="noind">Prvobitna pretpostavka da kritična putanja ide kroz te konvertore bila je
 <b>netačna</b>, i vredi reći zašto je nastala: u jednom merenju konvertor se pojavio kao
 najgora putanja, ali samo zato što je na tom ograničenju adresna putanja imala rezervu.
@@ -2220,7 +2236,7 @@ odeljka.</p>
     <tr><td>LUT po instanci</td><td class="n">5.269</td><td class="n"><b>1.910</b></td></tr>
     <tr><td>DSP po instanci</td><td class="n">16</td><td class="n"><b>9</b></td></tr>
     <tr><td>Blok-memorija po instanci</td><td class="n">4 manja bloka</td><td class="n">19 većih &larr; slabije</td></tr>
-    <tr><td>LUT za dve instance</td><td class="n">10.538 (59,9 %)</td><td class="n"><b>ceo sistem</b> 6.261 (35,6 %)</td></tr>
+    <tr><td>LUT za dve instance</td><td class="n">10.538 (59,9 %)</td><td class="n"><b>ceo sistem</b> 6.274 (35,7 %)</td></tr>
     <tr><td>Taktova za 90&times;90 / 30&times;30</td><td class="n">10.360.183</td><td class="n"><b>3.783.652</b></td></tr>
     <tr><td>Taktova po piksel-operaciji</td><td class="n">3,09</td><td class="n"><b>1,13</b></td></tr>
   </tbody>
@@ -2275,12 +2291,12 @@ nivou celog sistema:</p>
 <ul class="plain">
   <li>izlaz kroz AXI omotač je <b>bit-identičan</b> golom jezgru, čime je verifikacija iz
       poglavlja 7 prenesena na spakovan blok bez ponovnog dokazivanja (odeljak 7.5);</li>
-  <li>ceo sistem zauzima <b>35,6&nbsp;% LUT-ova</b> uređaja &mdash; <b>manje nego što
+  <li>ceo sistem zauzima <b>35,7&nbsp;% LUT-ova</b> uređaja &mdash; <b>manje nego što
       referentno rešenje troši samo na svoja dva jezgra</b> (59,9&nbsp;%) &mdash; i po
       instanci 1.910 naspram 5.269 LUT, odnosno 9 naspram 16 DSP blokova
       (odeljci 10.2 i 10.6);</li>
   <li>sistem <b>zatvara vremenska ograničenja</b> na 90,909 MHz, sa rezervom od
-      +0,170 ns i bez ijedne od 15.459 krajnjih tačaka koja krši ograničenje
+      +0,181 ns i bez ijedne od 15.460 krajnjih tačaka koja krši ograničenje
       (odeljak 10.3);</li>
   <li>na istom zadatku sistem troši <b>2,74&times; manje taktova</b> od referentnog
       rešenja: 3.783.652 naspram 10.360.183 (odeljak 10.6).</li>

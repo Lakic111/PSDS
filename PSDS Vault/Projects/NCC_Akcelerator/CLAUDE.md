@@ -29,7 +29,9 @@ dokumentovan?"
   logika). ⚠️ **ISPRAVLJENO 2026-07-25:** ESL dokumentacija navodi `xc7z010-clg225-2`,
   ali to je bio Vitis HLS default — **nijedna Digilent ploča ne koristi clg225**;
   svaka Zynq-7010 je `clg400-1`. Isti čip i kapacitet, ali speed grade `-1` (sporiji).
-  Koja tačno Zybo varijanta — nepotvrđeno, videti `(C) Sljedeća sesija.md`.
+  **Varijanta POTVRĐENA 2026-08-26: ORIGINALNI Zybo** (ploča ima VGA + jedan HDMI;
+  Z7-10 ima dva HDMI-ja i nijedan VGA). `board_part digilentinc.com:zybo:part0:2.0`,
+  PS_CLK 50 MHz, DDR3 **512 MB** (MT41K128M16 JT-125) — baferi ispod `0x1FFFFFFF`.
   Ranije pominjani ZedBoard/Zynq-7020 je bio samo generički primer iz Vezbe 1
   (tutorial za sam alat), NE naš target — XC7Z010 ima znatno manje resursa (17.600 LUT
   naspram ~53.200 na XC7Z020), što direktno objašnjava zašto su iskorišćena samo 2 od
@@ -114,13 +116,15 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 
 ## Trenutni status
 
-> **Zadnje ažuriranje:** 2026-07-26
+> **Zadnje ažuriranje:** 2026-08-26
 > **Koraci 1-8 ZAVRŠENI (70 bodova).** Preostaju Korak 9 (20) i Korak 10 (10).
 > Merodavna dokumentacija: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf`
 > (34 strane) — pokriva Korake 2-8, sa izmerenim post-route brojkama.
-> **Sledeće: Korak 9** — bitstream, XSA export, bare-metal aplikacija u Vitisu.
-> ⚠️ **Prvo razrešiti koja je tačno ploča** (Zybo vs Zybo Z7-10) — blokira Korak 9,
-> jer pogrešan PS preset znači da ploča ne bootuje i UART je na pogrešnom baud rate-u.
+> **Sledeće: Korak 9** — XSA export, bare-metal aplikacija u Vitisu.
+> ✅ **Ploča razrešena 2026-08-26: originalni Zybo** (`zybo:part0:2.0`). Ceo tok pušten
+> ponovo sa tim presetom — **timing zatvara, WNS +0,181 ns**; brojke se nisu bitno
+> pomerile. **Bitstream napravljen** (`ncc_system_wrapper.bit`, 2.083.870 B, DRC 0
+> grešaka); `write_bitstream` + KAPIJA 3 su sada u `run_impl.tcl`.
 > **⚠️ Part promenjen: `xc7z010clg400-1`** (bilo `clg225-2`) — svaka Digilent Zynq-7010
 > ploča je clg400-1; `clg225-2` iz ESL dokumentacije je bio Vitis HLS default, ne ploča.
 > Isti čip, identičan kapacitet (17600 LUT / 60 BRAM / 80 DSP), ali speed grade `-1`.
@@ -128,7 +132,7 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 >
 > | Resurs | Iskorišćeno | Kapacitet | % |
 > |---|---|---|---|
-> | Slice LUT | 6.261 | 17.600 | **35,6%** |
+> | Slice LUT | 6.274 | 17.600 | **35,65%** |
 > | Slice Registers | 5.024 | 35.200 | 14,3% |
 > | Block RAM Tile | 39 (38×36k + 2×18k) | 60 | **65,0%** |
 > | DSP48E1 | 18 | 80 | 22,5% |
@@ -136,7 +140,7 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 > Po instanci: `ncc0`/`ncc1` po **1.910 LUT / 1.240 FF / 19 RAMB36 / 9 DSP**;
 > `axi_interconnect_0` 1.616 LUT; `axi_cdma_0` 807 LUT.
 >
-> **WNS +0,170 ns na 11,0 ns → timing ZATVARA na 90,909 MHz** (traženo 95, PS PLL
+> **WNS +0,181 ns na 11,0 ns → timing ZATVARA na 90,909 MHz** (traženo 95, PS PLL
 > daje 1000/11). Fmax integrisanog sistema ~97,7 MHz; 100 MHz ne zatvara
 > (WNS −0,232 ns). Odstupanje 9,1% — rubrika 8e dozvoljava 20%.
 >
@@ -242,7 +246,7 @@ Sužavanje bi spustilo BRAM sa 9 na ~6 blokova. Nije urađeno jer 15% nije usko 
       `ncc_accel_tb` daje zlatni peak `0x80000000 @ (32,14)` kroz AXI, bit-identično
       Koraku 4. Spakovan u katalog + `.zip` arhiva, S01 opseg 128 KB.
 - [x] **Korak 7: Integracija u block design [5 bodova]** (ZAVRŠENO 2026-07-25)
-      Block design `ncc_system`: Zynq PS (board preset zybo-z7-10) + `proc_sys_reset`
+      Block design `ncc_system`: Zynq PS (board preset `zybo:part0:2.0`) + `proc_sys_reset`
       + **2× `ncc_accel`** + **AXI CDMA** (mem-na-mem, simple mode) + jedan
       `axi_interconnect` (STRATEGY=1, deljena magistrala) sa **2 mastera → 6 slave-ova**.
       Jedan takt **90,909 MHz** (FCLK_CLK0; traženo 95, PS PLL daje 1000/11)
@@ -266,5 +270,10 @@ Sužavanje bi spustilo BRAM sa 9 na ~6 blokova. Nije urađeno jer 15% nije usko 
       izmereno **2.461.201 taktova = 27,07 ms** za 90×90/25×15 pri 90,909 MHz.
 - [ ] Korak 9: Bitstream + bare-metal test u Vitis (port `tb.cpp` logike na realne
       registre/AXI DMA drajver) [20 bodova]
+      - [x] **Task 1 (2026-08-26): bitstream.** `write_bitstream` + KAPIJA 3 (ne pravi
+        bitstream ako timing ne zatvara) dodati u `run_impl.tcl`. Izmereno: DRC 0
+        grešaka, `.bit` 2.083.870 B.
+      - [ ] Task 2: export XSA sa bitstream-om
+      - [ ] Task 3: bare-metal aplikacija u Vitisu
 - [ ] Korak 10: TCL skripta za automatizaciju celog Vivado toka [10 bodova]
       (skeleton u `Vezbe/(C) Vezba 13 - Design Constraining i TCL Scripting.md`)
