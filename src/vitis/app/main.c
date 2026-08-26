@@ -42,6 +42,18 @@ int main(void) {
     {
         u64 ticks = (u64)(t1 - t0);
         u32 ms = (u32)((ticks * 1000u) / COUNTS_PER_SECOND);
+    {
+        extern u64 prof_load, prof_read, prof_wait;
+        extern u32 prof_words_load, prof_words_read;
+        xil_printf("prenos u S01  : %d ms, %d reci = %d B\r\n",
+                   (int)((prof_load * 1000u) / COUNTS_PER_SECOND),
+                   (int)prof_words_load, (int)(prof_words_load * 4u));
+        xil_printf("citanje rezult: %d ms, %d reci = %d B\r\n",
+                   (int)((prof_read * 1000u) / COUNTS_PER_SECOND),
+                   (int)prof_words_read, (int)(prof_words_read * 4u));
+        xil_printf("cekanje jezgra: %d ms\r\n",
+                   (int)((prof_wait * 1000u) / COUNTS_PER_SECOND));
+    }
         xil_printf("vreme: %d ms (%d tikova)\r\n", (int)ms, (int)ticks);
     }
 

@@ -3,6 +3,17 @@
 #include "ncc_logic.h"
 #include "data.h"
 #include "xil_printf.h"
+#include "xtime_l.h"
+
+/* Privremeno merenje po fazama (Task 8). Brojaci su u tikovima globalnog tajmera. */
+u64 prof_load = 0;   /* upis slike i sablona u S01 */
+u64 prof_read = 0;   /* citanje mape rezultata */
+u64 prof_wait = 0;   /* cekanje da jezgro zavrsi */
+u32 prof_words_load = 0;
+u32 prof_words_read = 0;
+#define PROF_BEGIN  XTime _t0, _t1; XTime_GetTime(&_t0)
+#define PROF_END(acc) XTime_GetTime(&_t1); (acc) += (u64)(_t1 - _t0)
+
 
 #define COARSE_TOPK 2
 #define TIMEOUT_US  2000000u
@@ -17,23 +28,29 @@ static void run_pair(int ta, int tb,
     int rwa = iw - TW[ta] + 1, rha = ih - TH[ta] + 1;
     *sa = 0u; if (sb) *sb = 0u;
 
-    ncc_load_tmpl(&NCC0, TP[ta], (u32)(TW[ta] * TH[ta]));
+    { PROF_BEGIN; ncc_load_tmpl(&NCC0, TP[ta], (u32)(TW[ta] * TH[ta]));
+      PROF_END(prof_load); prof_words_load += (u32)(TW[ta] * TH[ta]); }
     ncc_set_dims (&NCC0, (u8)iw, (u8)ih, (u8)TW[ta], (u8)TH[ta]);
     if (tb >= 0) {
-        ncc_load_tmpl(&NCC1, TP[tb], (u32)(TW[tb] * TH[tb]));
+        { PROF_BEGIN; ncc_load_tmpl(&NCC1, TP[tb], (u32)(TW[tb] * TH[tb]));
+          PROF_END(prof_load); prof_words_load += (u32)(TW[tb] * TH[tb]); }
         ncc_set_dims (&NCC1, (u8)iw, (u8)ih, (u8)TW[tb], (u8)TH[tb]);
     }
 
     ncc_start(&NCC0);
     if (tb >= 0) ncc_start(&NCC1);
 
-    if (ncc_wait_done(&NCC0, TIMEOUT_US)) { xil_printf("ncc0 TIMEOUT\r\n"); return; }
-    *sa = ncc_best_score(&NCC0, (u32)(rwa * rha), NULL);
+    { PROF_BEGIN;
+      if (ncc_wait_done(&NCC0, TIMEOUT_US)) { xil_printf("ncc0 TIMEOUT\r\n"); return; }
+      PROF_END(prof_wait); }
+    { PROF_BEGIN; *sa = ncc_best_score(&NCC0, (u32)(rwa * rha), NULL);
+      PROF_END(prof_read); prof_words_read += (u32)(rwa * rha); }
 
     if (tb >= 0) {
         int rwb = iw - TW[tb] + 1, rhb = ih - TH[tb] + 1;
         if (ncc_wait_done(&NCC1, TIMEOUT_US)) { xil_printf("ncc1 TIMEOUT\r\n"); return; }
-        *sb = ncc_best_score(&NCC1, (u32)(rwb * rhb), NULL);
+        { PROF_BEGIN; *sb = ncc_best_score(&NCC1, (u32)(rwb * rhb), NULL);
+          PROF_END(prof_read); prof_words_read += (u32)(rwb * rhb); }
     }
 }
 
@@ -61,8 +78,9 @@ square_t app_scan_square(int m, int n) {
     logic_downsample2x(seg_full, SEG_W, SEG_H, seg_coarse);
 
     /* --- GRUBI SCREEN: segment se upisuje JEDNOM, sabloni se menjaju --- */
-    ncc_load_image(&NCC0, seg_coarse, (u32)(cw * ch));
-    ncc_load_image(&NCC1, seg_coarse, (u32)(cw * ch));
+    { PROF_BEGIN; ncc_load_image(&NCC0, seg_coarse, (u32)(cw * ch));
+      ncc_load_image(&NCC1, seg_coarse, (u32)(cw * ch));
+      PROF_END(prof_load); prof_words_load += (u32)(2 * cw * ch); }
     for (k = 0; k < ncand; k += 2) {
         int ta = cands[k];
         int tb = (k + 1 < ncand) ? cands[k + 1] : -1;
@@ -84,8 +102,9 @@ square_t app_scan_square(int m, int n) {
     }
 
     /* --- FINA POTVRDA nad top-2 --- */
-    ncc_load_image(&NCC0, seg_full, (u32)(SEG_W * SEG_H));
-    ncc_load_image(&NCC1, seg_full, (u32)(SEG_W * SEG_H));
+    { PROF_BEGIN; ncc_load_image(&NCC0, seg_full, (u32)(SEG_W * SEG_H));
+      ncc_load_image(&NCC1, seg_full, (u32)(SEG_W * SEG_H));
+      PROF_END(prof_load); prof_words_load += (u32)(2 * SEG_W * SEG_H); }
     {
         u32 sa, sb;
         run_pair(topk[0], topk[1], TMPL_FULL, TMPL_FULL_W, TMPL_FULL_H,
