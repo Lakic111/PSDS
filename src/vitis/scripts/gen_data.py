@@ -33,7 +33,7 @@ def downsample2x(px, w, h):
         for x in range(ow):
             s = (px[(2*y)*w + 2*x] + px[(2*y)*w + 2*x + 1]
                  + px[(2*y+1)*w + 2*x] + px[(2*y+1)*w + 2*x + 1])
-            out.append(s // 4)
+            out.append((s + 2) >> 2)  # +2 = zaokruzivanje (v. tb.cpp:tb_vp::downsample2x)
     return out, ow, oh
 
 def emit(fh, name, vals, per_line=16):
