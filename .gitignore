@@ -1,5 +1,10 @@
 # Claude Code tooling (machine-specific)
 .claude/
+# ...ali projektni skills IDU u repo (dele se sa timom / preziveju reinstalaciju).
+# Ostatak .claude/ (settings.local.json, istorija) ostaje ignorisan.
+!.claude/
+!.claude/skills/
+!.claude/skills/**
 
 # Vivado / Vitis generisani projekat (regenerise se iz src/vhdl/script/*.tcl)
 src/vhdl/result/
