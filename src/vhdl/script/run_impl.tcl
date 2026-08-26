@@ -73,4 +73,25 @@ if {$wns < 0} {
 } else {
     puts "@@@ KAPIJA 2 OK: timing zatvara (WNS = $wns ns)"
 }
+
+# --- BITSTREAM (Korak 9) ----------------------------------------------------
+# Preskace se sa `set NCC_SKIP_BITSTREAM 1` PRE source-ovanja (npr. kad se meri samo
+# tajming). Podrazumevano se pravi.
+#
+# KAPIJA 3: ne pravimo bitstream za dizajn koji ne zatvara tajming. Bitstream bi se
+# napravio i tada -- write_bitstream ne gleda WNS -- ali bi na ploci radio nepredvidivo,
+# a to je najskuplja vrsta greske za dijagnostiku (nema poruke, samo pogresan rezultat).
+if {[info exists NCC_SKIP_BITSTREAM] && $NCC_SKIP_BITSTREAM} {
+    puts "@@@ BITSTREAM preskocen (NCC_SKIP_BITSTREAM = 1)"
+} elseif {$wns < 0} {
+    error "KAPIJA 3: bitstream se NE pravi jer timing ne zatvara (WNS = $wns ns)"
+} else {
+    puts "@@@ ============ BITSTREAM (Korak 9) ============"
+    set BITFILE [file join $NCC_PROJ_DIR ncc_system.runs impl_1 ${BD_NAME}_wrapper.bit]
+    write_bitstream -force $BITFILE
+    if {![file exists $BITFILE]} {
+        error "BITSTREAM: write_bitstream je prosao ali $BITFILE ne postoji"
+    }
+    puts "@@@ BITSTREAM OK: $BITFILE ([file size $BITFILE] B)"
+}
 puts "@@@ GOTOVO"
