@@ -90,12 +90,16 @@
 >    širina novih registara je 123 bita, ne 110. Izmeriti FF na istom partu/fazi, ili
 >    preformulisati bez konkretnog broja.
 >
-> ### Nekomitovano (odluka korisnika: ne komitovati njegov rad)
+> ### Git — REŠENO 2026-08-26
 >
-> Radno stablo ima **25 fajlova** koji nisu komitovani, uključujući ceo Korak 7
-> (block design skripte, popravke AXI IP-a, presek `ncc_core.vhd`) i sve izmene Taska 10
-> iz ove sesije: `BUGS.md`, `CLAUDE.md`, ovaj fajl, `(C) Plan implementacije (10 koraka).md`,
-> `run_synth_core.tcl`, `ncc_core_ooc.xdc`. **Nema tačke povratka za taj rad.**
+> Onih 25 nekomitovanih fajlova je komitovano u dva commita i pushovano na GitHub
+> (`https://github.com/Lakic111/PSDS.git`):
+>
+> - `d0854e5` Korak 7: block design, popravke AXI IP-a i presek u `ncc_core`
+> - `d39d1c1` Beleške: dizajn i planovi za Korake 7 i 8, BUGS, stanje projekta
+>
+> `main` je fast-forwardovan na `korak6-axi-ip`; obe grane su na `d39d1c1` i obe su
+> na remote-u. Radno stablo je čisto. **Tačka povratka sada postoji.**
 >
 > ### Pouke iz izvršavanja — plan je ispravljen na 11 mesta
 >
@@ -194,9 +198,9 @@
 > 4. **Svesno odloženo:** `shared variable` u `dp_bram.vhd` nije protected tip, a fajl
 >    je sad deklarisan kao VHDL-2008. Vivado to spušta na upozorenje; striktniji alati
 >    (Questa/Riviera u -2008 režimu) bi odbili. Ne koristimo ih.
-> 5. **Git: ništa nije komitovano** (korisnik je rekao da commit nije bitan). Sve stoji
->    nekomitovano na grani `korak6-axi-ip`. Korak 6 je komitovan (`70d8f9a`); `main`
->    još ne sadrži ni Korak 6.
+> 5. ~~**Git: ništa nije komitovano.**~~ **REŠENO 2026-08-26** — sve je komitovano
+>    (`d0854e5`, `d39d1c1`) i pushovano; `main` i `korak6-axi-ip` su obe na `d39d1c1`
+>    na `github.com/Lakic111/PSDS`.
 >
 > ## Korak 7 (gotovo)
 >
@@ -290,9 +294,9 @@ parametrizovan da se meri na ograničenju koje se tvrdi.
 **8e po odluci korisnika bez rekalibracije `K_CYC`** — porede se resursi i taktovi, gde je
 poređenje pošteno; ukupno vreme table se ne problematizuje. SystemC nije instaliran.
 
-**Nekomitovano:** korisnik je odlučio da se njegovih 25 nekomitovanih fajlova ne dira, pa
-svaki commit dira samo ciljni HTML. Posledica: sve izmene Taska 10 (`BUGS.md`, `CLAUDE.md`,
-plan fajlovi, `run_synth_core.tcl`, `ncc_core_ooc.xdc`) **nisu komitovane**.
+**Nekomitovano:** ~~korisnik je odlučio da se njegovih 25 nekomitovanih fajlova ne dira, pa
+svaki commit dira samo ciljni HTML.~~ **Prevaziđeno 2026-08-26** — sve je komitovano
+(`d0854e5`, `d39d1c1`) i pushovano na GitHub.
 
 ### 2026-07-26 — Korak 8a/8b izmereni + code review otkrio 3 AXI buga
 
