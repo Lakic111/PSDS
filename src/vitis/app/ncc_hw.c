@@ -1,13 +1,35 @@
+/* ---------------------------------------------------------------------------
+ * NCC_USE_CDMA -- da li prenose radi CDMA (1) ili procesor (0).
+ *
+ * TRENUTNO 0. Razlog: burstovi duzi od DVA beata zaglavljuju axi_interconnect_0
+ * (STRATEGY=1, deljena magistrala). Izmereno na ploci preko JTAG-a, bez ovog koda:
+ *     1 beat  RADI    2 beata RADI    3 beata ZAGLAVI    4 beata ZAGLAVI
+ * i to podjednako za DDR->DDR (kroz HP0) i za S01->S01. CDMA, HP0, S01 i topologija
+ * block designa su time iskljuceni -- kriv je burst kroz interkonekt. Detalji u
+ * BUGS.md.
+ *
+ * Procesorski prenosi su DOKAZANO ispravni (faza 2: 8100 reci, 0 neslaganja; faza 3:
+ * zlatni vektor 0x80000000 @ 956). Poglavlje 9.5 dokumentacije navodi da DMA donosi
+ * ~6 % ukupnog vremena, pa je cena mala.
+ *
+ * Kad se interkonekt popravi (izmestanje AXI-Lite slave-ova na zaseban), dovoljno je
+ * ovde staviti 1 -- ostatak koda je netaknut.
+ * ------------------------------------------------------------------------- */
+#define NCC_USE_CDMA 0
+
 #include "ncc_hw.h"
 #include "xil_io.h"
 #include "sleep.h"
+#if NCC_USE_CDMA
 #include "xaxicdma.h"
 #include "xparameters.h"
 #include "xil_cache.h"
+#endif
 
 const ncc_dev_t NCC0 = { 0x50000000u, 0x50020000u };
 const ncc_dev_t NCC1 = { 0x51000000u, 0x51020000u };
 
+#if NCC_USE_CDMA
 /* DRE je iskljucen (C_INCLUDE_DRE=0) -> izvor i odrediste moraju biti poravnati
    na 4 bajta. aligned(64) je sa rezervom i poklapa se sa linijom kesa. */
 static u32 staging[NCC_IMG_MAX_WORDS] __attribute__((aligned(64)));
@@ -20,16 +42,22 @@ int ncc_hw_init(void) {
     if (XAxiCdma_CfgInitialize(&cdma, cfg, cfg->BaseAddress) != XST_SUCCESS) {
         xil_printf("CDMA: init pao\r\n"); return -1;
     }
-    XAxiCdma_IntrDisable(&cdma, XAXICDMA_XR_IRQ_ALL_MASK);   /* prozivanje, ne prekidi */
+    XAxiCdma_IntrDisable(&cdma, XAXICDMA_XR_IRQ_ALL_MASK);
     cdma_ready = 1;
     return 0;
 }
+#else
+/* Procesorski prenosi ne traze nikakvu inicijalizaciju. */
+int ncc_hw_init(void) { return 0; }
+#endif
+
 
 void ncc_write_reg(const ncc_dev_t *d, u32 off, u32 v) { Xil_Out32(d->ctrl_base + off, v); }
 u32  ncc_read_reg (const ncc_dev_t *d, u32 off)        { return Xil_In32(d->ctrl_base + off); }
 
 /* Sirenje 8 -> 32 bita: u S01 je jedan piksel po 32-bitnoj reci.
    Prenos radi CDMA preko staging bafera; procesor samo priprema podatke u DDR-u. */
+#if NCC_USE_CDMA
 static int load_region(const ncc_dev_t *d, u32 off, const u8 *px, u32 count, u32 max) {
     u32 i;
     int tries;
@@ -55,6 +83,18 @@ static int load_region(const ncc_dev_t *d, u32 off, const u8 *px, u32 count, u32
 
     return (XAxiCdma_GetError(&cdma) != 0x0) ? -6 : 0;
 }
+#else
+/* Procesorski upis: sirenje 8 -> 32 bita (u S01 je jedan piksel po reci).
+   Jednobeat transakcije -- dokazano ispravne u fazi 2 (8100 reci, 0 neslaganja).
+   Burst se ne koristi jer ga interkonekt ne prezivljava (BUGS.md). */
+static int load_region(const ncc_dev_t *d, u32 off, const u8 *px, u32 count, u32 max) {
+    u32 i;
+    if (count > max) return -1;
+    for (i = 0; i < count; i++) Xil_Out32(d->mem_base + off + 4u*i, (u32)px[i]);
+    return 0;
+}
+#endif
+
 
 int ncc_load_image(const ncc_dev_t *d, const u8 *px, u32 count) {
     return load_region(d, MEM_IMG_OFF, px, count, NCC_IMG_MAX_WORDS);
@@ -94,6 +134,7 @@ int ncc_wait_done(const ncc_dev_t *d, u32 timeout_us) {
 
 /* CDMA: S01 -> DDR. Posle prenosa kes MORA biti ponisten nad baferom,
    inace procesor cita staru sadrzinu. */
+#if NCC_USE_CDMA
 static int fetch_results(const ncc_dev_t *d, u32 count) {
     int tries;
     if (count > NCC_IMG_MAX_WORDS) return -1;
@@ -124,3 +165,18 @@ u32 ncc_best_score(const ncc_dev_t *d, u32 n_results, u32 *idx_out) {
     if (idx_out) *idx_out = mi;
     return mx;
 }
+#else
+/* INVARIJANT 1: poredjenje kao u32. 0x80000000 je NCC^2 = 1,0 (savrseno poklapanje);
+   kao int32 je negativan, pa bi trazenje maksimuma od -1 odbacilo bas najbolji
+   rezultat. Referentni collect() u src/tb.cpp ima bas tu gresku. */
+u32 ncc_best_score(const ncc_dev_t *d, u32 n_results, u32 *idx_out) {
+    u32 i, v, mx = 0u, mi = 0u;
+    for (i = 0; i < n_results; i++) {
+        v = Xil_In32(d->mem_base + MEM_RES_OFF + 4u*i);
+        if (v > mx) { mx = v; mi = i; }
+    }
+    if (idx_out) *idx_out = mi;
+    return mx;
+}
+#endif
+

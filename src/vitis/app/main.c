@@ -33,10 +33,10 @@ static int phase3(const ncc_dev_t *d, const char *name) {
 
 int main(void) {
     int ok;
-    xil_printf("\r\n=== NCC akcelerator, FAZA 4 (CDMA) (zlatni vektor) ===\r\n");
+    xil_printf("\r\n=== NCC akcelerator, FAZA 4 (prenosi procesorom) (zlatni vektor) ===\r\n");
     ncc_hw_init();
     ok  = phase3(&NCC0, "ncc0");
     ok &= phase3(&NCC1, "ncc1");
-    xil_printf(ok ? "FAZA 4 (CDMA): PROSLA\r\n" : "FAZA 4 (CDMA): PALA\r\n");
+    xil_printf(ok ? "FAZA 4 (prenosi procesorom): PROSLA\r\n" : "FAZA 4 (prenosi procesorom): PALA\r\n");
     while (1) { }
 }

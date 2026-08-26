@@ -193,6 +193,90 @@ uzroka uporediti putanje na ISTOM taktu.** Izmena je ipak zadržana — zbog pov
 
 ---
 
+## Burstovi duži od 2 beata zaglavljuju `axi_interconnect_0`  [NAĐENO NA PLOČI 2026-08-26, NIJE POPRAVLJENO]
+
+Korak 9, faza 4 (CDMA prenos) visi: program ispiše banner i stane, procesor se zaglavi
+tako da ga debager ne može zaustaviti, a **ni CDMA registri se ne mogu pročitati** —
+cela PL magistrala je blokirana neizmirenom transakcijom.
+
+### Merenje — CDMA programiran direktno preko JTAG-a, bez ijedne linije našeg C koda
+
+| BTT | beatova | DDR→DDR (kroz HP0) | S01→S01 (kroz PL) |
+|---|---|---|---|
+| 4 | 1 | **radi** | **radi** |
+| 8 | 2 | **radi** | — |
+| 12 | 3 | **zaglavi** | — |
+| 16 | 4 | **zaglavi** | **zaglavi** |
+
+Kad prođe: `CDMASR = 0x00001002` (IOC + Idle) i podaci stignu na odredište.
+Kad ne prođe: čitanje CDMA registara puca, magistrala blokirana.
+
+### Šta je time ISKLJUČENO
+
+- **CDMA** radi — jednobeat i dvobeat prenosi prolaze u oba smera.
+- **`S_AXI_HP0`** radi — DDR→DDR prenos prolazi kroz njega.
+- **S01** radi — S01→S01 prenos prolazi.
+- **Naš softver** nije u igri — test je čist JTAG.
+- **Topologija block designa** je provrena upitom nad `.bd`:
+  `axi_cdma_0/M_AXI ↔ axi_interconnect_0/S01_AXI`,
+  `axi_interconnect_0/M05_AXI ↔ processing_system7_0/S_AXI_HP0`,
+  svi taktovi na `FCLK_CLK0`, reseti povezani, adresna mapa CDMA mastera ima sva tri
+  segmenta (`ncc0.S01`, `ncc1.S01`, `HP0_DDR_LOWOCM`).
+
+Zajednički element otkaza je **burst kroz `axi_interconnect_0`**.
+
+### Zašto ovo nije izbilo ranije
+
+**PS `M_AXI_GP0` radi isključivo jednobeat transakcije.** Interkonekt nikad nije video
+burst — ni u Koraku 7, ni u Koraku 8, ni u fazama 1-3 Koraka 9 (koje su sve išle
+procesorom). Prvi burst u istoriji ovog dizajna poslao je CDMA u fazi 4, i tada je puklo.
+
+Ni jedan testbench to nije mogao uhvatiti: TB-ovi verifikuju `ncc_accel` **direktno**,
+bez interkonekta u putanji.
+
+### Kontekst: zašto STRATEGY=1
+
+`axi_interconnect_0` je `STRATEGY=1` (Minimize Area, deljena magistrala sa arbitracijom).
+Izabran je u Koraku 8b **zbog tajminga** — `STRATEGY=2` (pun krosbar) daje
+WNS **−3,608 ns** i ne zatvara, uz rutiranje 6,048 ns u kritičnoj putanji. Prelaz na
+deljenu magistralu spustio je interkonekt sa **8.673 na 1.616 LUT**.
+
+### Hipoteza o mehanizmu — NIJE POTVRĐENA
+
+U deljenom (SASD) režimu svi slave-ovi dele podatkovni put, a **tri od šest su AXI-Lite**
+(`ncc0.S00`, `ncc1.S00`, `axi_cdma_0.S_AXI_LITE`), koji burst ne podržavaju. Ako je
+deljeni put građen prema najrestriktivnijem slave-u, burst se lomi.
+
+Provera bi bila: izmestiti tri Lite slave-a na zaseban interkonekt, pa ostaviti burst
+saobraćaj na svom. To je predloženo kao sledeći korak, ali **nije izvedeno u trenutku
+pisanja** — pa se hipoteza tako i vodi.
+
+### Odluka (2026-08-26)
+
+Korak 9 se dovršava **bez DMA u softveru** — procesorski prenosi su dokazano ispravni
+(faze 2 i 3, 8.100 reči, 0 neslaganja). Poglavlje 9.5 dokumentacije samo navodi da DMA
+donosi **~6 % ukupnog vremena** i da je izabran „zato što ga zadatak izričito navodi među
+komponentama za integraciju", ne zbog brzine. DMA **ostaje u block designu** (Korak 7
+nepromenjen); aplikacija ga ne koristi.
+
+Izmeštanje Lite slave-ova ostaje kao poboljšanje posle toga.
+
+### Oporavak zaglavljene ploče
+
+```tcl
+targets -set -filter {name =~ "xc7z010"}
+rst -srst
+fpga -file <bitstream>
+targets -set -filter {name =~ "*Cortex-A9 MPCore #0*"}
+stop
+```
+
+⚠️ Posle više uzastopnih zaglavljivanja DAP ume da pređe u trajnu grešku
+(`APB AP transaction error, DAP status 0x30000021`) iz koje ga softverski reset ne vadi —
+tada je potreban **fizički restart napajanja** ploče.
+
+---
+
 ## S00 (AXI-Lite) upis VISI kad W stigne pre AW  [NAĐENO NA PLOČI 2026-08-26]
 
 Prvi pokušaj pokretanja softvera na ploči (Korak 9, faza 1). Program ispiše banner i
