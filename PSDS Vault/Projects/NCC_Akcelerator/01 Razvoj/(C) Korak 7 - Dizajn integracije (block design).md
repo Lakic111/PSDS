@@ -19,7 +19,7 @@
 | 2 | **Popraviti read-burst u S01 pre BD-a** | Nađen stvarni defekt (§2). Bez popravke CDMA čitanje vraća pogrešne podatke. |
 | 3 | **Fiksna adresna mapa po ESL `common.hpp`** | Kontrolne baze identične ESL-u → dokumentacija i Korak 9 kod nasleđuju konstante; mapa se ne menja pri rekonstrukciji BD-a (bitno za Korak 10). |
 | 4 | **Part `xc7z010clg400-1`** (bilo `clg225-2`) | Svaka Digilent Zynq-7010 ploča je `clg400-1`; `clg225-2` iz ESL dokumentacije je bio Vitis HLS default, ne stvarna ploča (§7). |
-| 5 | **`board_part digilentinc.com:zybo-z7-10:part0:1.2`** | NEPOTVRĐENA pretpostavka — korisnik nije imao ploču pred sobom. Part je isti za oba Zybo varijanteta, samo PS preset se razlikuje; promena je jedna linija. |
+| 5 | **`board_part digilentinc.com:zybo:part0:B.4`** | **POTVRĐENO 2026-08-26** — ploča ima VGA + 1× HDMI → originalni Zybo. Do tada je stajalo `zybo-z7-10:part0:1.2` kao pretpostavka, i sve brojke u ovom dokumentu su merene sa TIM presetom. Part `xc7z010clg400-1` je isti; PS preset nije — tajming se mora ponovo potvrditi. |
 | 6 | **TCL skripta, batch, bez GUI-a** | Temelj za Korak 10 (10 bodova); reproducibilno; fiksna mapa ostaje fiksna. |
 | 7 | **Bez prekida — polling** | `STATUS` polling odgovara ESL `hw_status` semantici, a `XAxiCdma_IsBusy` je dovoljan. Izbegava GIC inicijalizaciju u Koraku 9. |
 
@@ -358,6 +358,13 @@ ali onda oba TB-a iz Koraka 4 moraju ponovo proći); `result_mem` 8192→4096 (�
 ali ograničava minimalnu veličinu šablona).
 
 ### 7.3 `board_part` je pretpostavka
+
+> **✅ RAZREŠENO 2026-08-26.** Ploča je **originalni Zybo** (VGA + 1× HDMI), a
+> `board_part` je **`digilentinc.com:zybo:part0:B.4`**. Pažnja: verzija je `B.4`, ne
+> `2.0` iz tabele ispod — `2.0` je `schema_version` iz `board.xml`, a ne revizija ploče;
+> segment verzije u `board_part` je ime direktorijuma (`zybo/B.3`, `zybo/B.4`). Preseti
+> B.3 i B.4 imaju identične PS_CLK, DDR partno i DDR kašnjenja. Odeljak ispod je
+> istorijski zapis nerazrešenog pitanja.
 
 `digilentinc.com:zybo-z7-10:part0:1.2` je **nepotvrđeno**. Part je isti za oba Zybo
 varijanteta, razlikuje se samo PS preset:
