@@ -23,4 +23,11 @@ extern const ncc_dev_t NCC0, NCC1;
 int  ncc_hw_init  (void);
 void ncc_write_reg(const ncc_dev_t *d, u32 off, u32 v);
 u32  ncc_read_reg (const ncc_dev_t *d, u32 off);
+
+#define NCC_IMG_MAX_WORDS  8192u
+#define NCC_TMPL_MAX_WORDS 8192u
+
+int  ncc_load_image  (const ncc_dev_t *d, const u8 *px, u32 count);
+int  ncc_load_tmpl   (const ncc_dev_t *d, const u8 *px, u32 count);
+void ncc_read_results(const ncc_dev_t *d, u32 *dst, u32 count);
 #endif

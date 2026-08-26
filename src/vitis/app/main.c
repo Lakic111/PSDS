@@ -1,34 +1,45 @@
 #include <stdio.h>
 #include "xil_printf.h"
+#include "xil_io.h"
 #include "ncc_hw.h"
 
-static int phase1(const ncc_dev_t *d, const char *name) {
-    u32 st, rb;
-    int ok = 1;
+static u8  pat[8100];
+static u32 rb [8100];
 
-    st = ncc_read_reg(d, REG_STATUS);
-    xil_printf("%s STATUS = 0x%08x (done=%d busy=%d)\r\n",
-               name, st, (st & STATUS_DONE_BIT) ? 1 : 0, (st & STATUS_BUSY_BIT) ? 1 : 0);
-    if (st & STATUS_BUSY_BIT) { xil_printf("  GRESKA: busy=1 na pocetku\r\n"); ok = 0; }
+static int phase2(const ncc_dev_t *d, const char *name) {
+    u32 i; int bad = 0;
 
-    ncc_write_reg(d, REG_IMG_W, 90);
-    rb = ncc_read_reg(d, REG_IMG_W);
-    xil_printf("%s IMG_W upisano 90, procitano %d\r\n", name, (int)rb);
-    if (rb != 90u) { xil_printf("  GRESKA: ocekivano 90\r\n"); ok = 0; }
+    for (i = 0; i < 8100u; i++) pat[i] = (u8)(i * 7u + 13u);   /* neponovljiv obrazac */
 
-    ncc_write_reg(d, REG_TMP_H, 30);
-    rb = ncc_read_reg(d, REG_TMP_H);
-    if (rb != 30u) { xil_printf("  GRESKA: TMP_H procitano %d\r\n", (int)rb); ok = 0; }
+    if (ncc_load_image(d, pat, 8100u)) { xil_printf("%s: load_image odbio\r\n", name); return 0; }
+    for (i = 0; i < 8100u; i++) rb[i] = Xil_In32(d->mem_base + MEM_IMG_OFF + 4u*i);
+    for (i = 0; i < 8100u; i++)
+        if (rb[i] != (u32)pat[i]) {
+            if (bad < 3) xil_printf("%s slika[%d]: upisano %d procitano %d\r\n",
+                                    name, (int)i, (int)pat[i], (int)rb[i]);
+            bad++;
+        }
 
-    return ok;
+    if (ncc_load_tmpl(d, pat, 2700u)) { xil_printf("%s: load_tmpl odbio\r\n", name); return 0; }
+    for (i = 0; i < 2700u; i++) {
+        u32 v = Xil_In32(d->mem_base + MEM_TMPL_OFF + 4u*i);
+        if (v != (u32)pat[i]) {
+            if (bad < 6) xil_printf("%s sablon[%d]: upisano %d procitano %d\r\n",
+                                    name, (int)i, (int)pat[i], (int)v);
+            bad++;
+        }
+    }
+
+    xil_printf("%s: %d neslaganja\r\n", name, bad);
+    return bad == 0;
 }
 
 int main(void) {
     int ok;
-    xil_printf("\r\n=== NCC akcelerator, FAZA 1 ===\r\n");
+    xil_printf("\r\n=== NCC akcelerator, FAZA 2 ===\r\n");
     ncc_hw_init();
-    ok  = phase1(&NCC0, "ncc0");
-    ok &= phase1(&NCC1, "ncc1");
-    xil_printf(ok ? "FAZA 1: PROSLA\r\n" : "FAZA 1: PALA\r\n");
+    ok  = phase2(&NCC0, "ncc0");
+    ok &= phase2(&NCC1, "ncc1");
+    xil_printf(ok ? "FAZA 2: PROSLA\r\n" : "FAZA 2: PALA\r\n");
     while (1) { }
 }
