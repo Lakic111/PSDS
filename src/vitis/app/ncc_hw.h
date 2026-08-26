@@ -30,4 +30,9 @@ u32  ncc_read_reg (const ncc_dev_t *d, u32 off);
 int  ncc_load_image  (const ncc_dev_t *d, const u8 *px, u32 count);
 int  ncc_load_tmpl   (const ncc_dev_t *d, const u8 *px, u32 count);
 void ncc_read_results(const ncc_dev_t *d, u32 *dst, u32 count);
+
+void ncc_set_dims  (const ncc_dev_t *d, u8 iw, u8 ih, u8 tw, u8 th);
+void ncc_start     (const ncc_dev_t *d);
+int  ncc_wait_done (const ncc_dev_t *d, u32 timeout_us);
+u32  ncc_best_score(const ncc_dev_t *d, u32 n_results, u32 *idx_out);
 #endif

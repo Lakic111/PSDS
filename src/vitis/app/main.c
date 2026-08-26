@@ -1,45 +1,42 @@
-#include <stdio.h>
 #include "xil_printf.h"
 #include "xil_io.h"
 #include "ncc_hw.h"
+#include "data.h"
 
-static u8  pat[8100];
-static u32 rb [8100];
+#define GOLD_IW 90
+#define GOLD_IH 90
+#define GOLD_TW 25
+#define GOLD_TH 15
+#define GOLD_RW (GOLD_IW - GOLD_TW + 1)          /* 66 */
+#define GOLD_RH (GOLD_IH - GOLD_TH + 1)          /* 76 */
+#define GOLD_N  (GOLD_RW * GOLD_RH)              /* 5016 */
+#define GOLD_EXPECT_SCORE 0x80000000u
+#define GOLD_EXPECT_IDX   956u                   /* v=14, u=32 -> 14*66 + 32 */
 
-static int phase2(const ncc_dev_t *d, const char *name) {
-    u32 i; int bad = 0;
+static int phase3(const ncc_dev_t *d, const char *name) {
+    u32 score, idx;
 
-    for (i = 0; i < 8100u; i++) pat[i] = (u8)(i * 7u + 13u);   /* neponovljiv obrazac */
+    if (ncc_load_image(d, GOLD_SEG,  8100u)) { xil_printf("%s: load_image odbio\r\n", name); return 0; }
+    if (ncc_load_tmpl (d, GOLD_TMPL,  375u)) { xil_printf("%s: load_tmpl odbio\r\n",  name); return 0; }
+    ncc_set_dims(d, GOLD_IW, GOLD_IH, GOLD_TW, GOLD_TH);
+    ncc_start(d);
+    if (ncc_wait_done(d, 2000000u)) { xil_printf("%s: TIMEOUT\r\n", name); return 0; }
 
-    if (ncc_load_image(d, pat, 8100u)) { xil_printf("%s: load_image odbio\r\n", name); return 0; }
-    for (i = 0; i < 8100u; i++) rb[i] = Xil_In32(d->mem_base + MEM_IMG_OFF + 4u*i);
-    for (i = 0; i < 8100u; i++)
-        if (rb[i] != (u32)pat[i]) {
-            if (bad < 3) xil_printf("%s slika[%d]: upisano %d procitano %d\r\n",
-                                    name, (int)i, (int)pat[i], (int)rb[i]);
-            bad++;
-        }
+    score = ncc_best_score(d, (u32)GOLD_N, &idx);
+    xil_printf("%s: skor 0x%08x @ idx %d (u=%d v=%d)\r\n",
+               name, score, (int)idx, (int)(idx % GOLD_RW), (int)(idx / GOLD_RW));
 
-    if (ncc_load_tmpl(d, pat, 2700u)) { xil_printf("%s: load_tmpl odbio\r\n", name); return 0; }
-    for (i = 0; i < 2700u; i++) {
-        u32 v = Xil_In32(d->mem_base + MEM_TMPL_OFF + 4u*i);
-        if (v != (u32)pat[i]) {
-            if (bad < 6) xil_printf("%s sablon[%d]: upisano %d procitano %d\r\n",
-                                    name, (int)i, (int)pat[i], (int)v);
-            bad++;
-        }
-    }
-
-    xil_printf("%s: %d neslaganja\r\n", name, bad);
-    return bad == 0;
+    if (score != GOLD_EXPECT_SCORE) { xil_printf("  GRESKA: ocekivano 0x80000000\r\n"); return 0; }
+    if (idx   != GOLD_EXPECT_IDX)   { xil_printf("  GRESKA: ocekivan idx 956\r\n");     return 0; }
+    return 1;
 }
 
 int main(void) {
     int ok;
-    xil_printf("\r\n=== NCC akcelerator, FAZA 2 ===\r\n");
+    xil_printf("\r\n=== NCC akcelerator, FAZA 3 (zlatni vektor) ===\r\n");
     ncc_hw_init();
-    ok  = phase2(&NCC0, "ncc0");
-    ok &= phase2(&NCC1, "ncc1");
-    xil_printf(ok ? "FAZA 2: PROSLA\r\n" : "FAZA 2: PALA\r\n");
+    ok  = phase3(&NCC0, "ncc0");
+    ok &= phase3(&NCC1, "ncc1");
+    xil_printf(ok ? "FAZA 3: PROSLA\r\n" : "FAZA 3: PALA\r\n");
     while (1) { }
 }
