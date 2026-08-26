@@ -1,21 +1,219 @@
 # Sljedeća sesija
 
-## PRVO za sledeću sesiju
+## PRVO za sledeću sesiju — Korak 9 (bitstream + Vitis)
 
-> **KORACI 1-6 SU ZAVRŠENI I VERIFIKOVANI** (stanje 2026-07-24). 60 bodova
-> pokriveno. Ne vraćati se na njih bez konkretnog razloga.
+> **Stanje 2026-07-26 (kraj sesije). KORACI 1-8 ZAVRŠENI — 70 bodova.**
+> Preostaju **Korak 9 (20 bodova)** i **Korak 10 (10 bodova)**.
 >
-> **Sledeće je Korak 7: integracija `ncc_accel` IP-a u block design** (Zynq PS +
-> AXI DMA + kontrola preko AXI-Lite). Napomena: Vežba 08-09 NE pokriva Korak 7 —
-> tražiti dodatni izvor (Zynq PS blok, AXI DMA IP, adresna mapa iz `common.hpp`).
+> ### ⚠️ Prvo razrešiti: koja je tačno ploča
+>
+> To je **jedina blokirajuća stavka** za Korak 9. `board_part` je postavljen na
+> `digilentinc.com:zybo-z7-10:part0:1.2`, ali je to **nepotvrđena pretpostavka** —
+> korisnik nije imao ploču pred sobom. Part `xc7z010clg400-1` je siguran u oba slučaja;
+> razlikuje se samo PS preset, i to bitno:
+>
+> | | Zybo (originalni) | Zybo Z7-10 |
+> |---|---|---|
+> | Prepoznavanje na oko | **VGA** + 1× HDMI, 6 Pmod | **2× HDMI**, MIPI CSI, 5 Pmod |
+> | `board_part` | `digilentinc.com:zybo:part0:2.0` | `digilentinc.com:zybo-z7-10:part0:1.2` |
+> | PS_CLK kristal | 50 MHz | 33,333 MHz |
+> | DDR3 | 512 MB | 1 GB |
+>
+> Pogrešan preset → ploča ne bootuje i UART je na pogrešnom baud rate-u. Promena je
+> **jedna linija** u `src/vhdl/script/create_bd.tcl`.
+>
+> ### Korak 9 — šta treba
+>
+> 1. **Bitstream.** `run_impl.tcl` staje na `phys_opt_design (Post-Route)` i **ne zove
+>    `write_bitstream`** — dodati taj korak.
+> 2. **Export XSA** (sa bitstream-om) za Vitis.
+> 3. **Bare-metal aplikacija:** port logike iz `src/tb.cpp` (`tb_vp::test()`) — učitavanje
+>    slike, petlja 8×8, provera praznog polja, coarse/fine NCC, generisanje FEN-a — ali sa
+>    `Xil_Out32`/`Xil_In32` umesto TLM `b_transport`, i pravim CDMA drajverom
+>    (`XAxiCdma_*`) umesto modela iz `dma.cpp`.
+> 4. **Interfejs je već dokumentovan** — adresna mapa, registri, tok podataka po polju i
+>    dva obavezna pravila su u poglavljima 8 i 9 PDF-a. Ne izvoditi ih iznova.
+>
+> **Dva pravila koja softver MORA poštovati** (hardver ih ne proverava):
+> - skorovi se porede kao **`u32`**, ne `int32` — `0x80000000` (NCC²=1,0) je kao `int32`
+>   negativan, pa bi traženje maksimuma od `-1` odbacilo savršeno poklapanje;
+> - **nikad CDMA i CPU nad istim `S01` istovremeno** — prioritet ima čitanje, a upis nije
+>   zabranjen, pa bi upis otišao na adresu čitanja. Održava se time što CPU čeka
+>   `XAxiCdma_IsBusy`.
+>
+> ### Korak 10 — šta već postoji
+>
+> Skripte su uglavnom napisane: `create_bd.tcl` (block design), `run_impl.tcl` (sinteza +
+> implementacija sa kapijama), `run_synth_core.tcl` (OOC jezgro, period je parametar),
+> `fix_ip_package.tcl`. Ostaje **`package_ip.tcl`** i ulančavanje u jedan tok do XSA.
+>
+> ⚠️ `package_ip.tcl` **mora** na kraju pozvati `fix_ip_package.tcl` — wizard vraća
+> `vhdlSource` i `ADDR_WIDTH=10`, a sa pogrešnim tipom fajla IP se sintetiše kao **prazna
+> kutija bez ijedne greške**. `.zip` arhiva IP-a je zastarela i regeneriše se tu.
+>
+> ### Šta je Korak 8 dao (2026-07-26)
+>
+> Dokumentacija je proširena sa Koraka 2-5 na **2-8**:
+> **`02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf`** — 34 strane (bilo 22),
+> 24 tabele, 4 SVG dijagrama. Stari `Korak2-5.pdf` je uklonjen (ostaje u git istoriji).
+>
+> Deset taskova, svi komitovani na `korak6-axi-ip`:
+>
+> | Commit | Šta |
+> |---|---|
+> | `8a999fb` `052960b` `3cc6ca4` | §5.1, Tabela 5, §5.6 na 23 stanja |
+> | `e23da3d` | ASMD dijagram (Slika 1) prerisan na 23 stanja |
+> | `b564af4` `8dc28cd` | §5.5 i Slika 2 na tri stepena protočnosti |
+> | `142270c` | §6 registri (+5) i datapath |
+> | `b97e3a9` | §7 na post-route brojke |
+> | `55974a7` | novo poglavlje 8 — IP jezgro |
+> | `e5f8f29` `9be9ba3` | novo poglavlje 9 — integracija + Slika 4 |
+> | `317a7a6` | novo poglavlje 10 — analiza sistema |
+> | `ebf3346` | zaključak, Sadržaj, preimenovanje, PDF |
+>
+> **Re-merene brojke Koraka 5** (bile su post-sintezne, na starom partu i starom RTL-u):
+> goli `ncc_core` post-route na `clg400-1` daje 1.472 LUT / 664 FF, WNS **+0,146 ns na
+> 10 ns** → **Fmax ~101,5 MHz, jezgro ZATVARA 100 MHz.** Latencija **2.461.201 taktova**.
+> Reprodukcija: `run_synth_core.tcl`, period je parametar (`-tclargs 11.0`).
+>
+> **Ograničenje je integracija, ne jezgro** — sistem na 10 ns daje −0,232 ns; vezujuća
+> putanja je adresna unutar jezgra, ali kritična samo pod pritiskom razmeštaja.
+>
+> ### Dve odluke koje čekaju korisnika
+>
+> 1. **Slika 3 (blok dijagram datapath-a) nije prerisana.** Još crta
+>    oduzimač→množač→delilac bez register-kutija. Umesto prerade dodat je pošten pasus da
+>    slika „radi preglednosti" ne iscrtava pet protočnih registara. ASMD (Slika 1) **je**
+>    prerisan — ovo je svesno odstupanje. Prerisati ili zadržati napomenu?
+> 2. **„+110 flip-flopova" u §6.2 nije čisto uporediv broj.** Izveden kao 664 (post-route,
+>    `clg400-1`) − 554 (post-**synth**, `clg225-2`) — dva parta i dve faze toka. Suma
+>    širina novih registara je 123 bita, ne 110. Izmeriti FF na istom partu/fazi, ili
+>    preformulisati bez konkretnog broja.
+>
+> ### Nekomitovano (odluka korisnika: ne komitovati njegov rad)
+>
+> Radno stablo ima **25 fajlova** koji nisu komitovani, uključujući ceo Korak 7
+> (block design skripte, popravke AXI IP-a, presek `ncc_core.vhd`) i sve izmene Taska 10
+> iz ove sesije: `BUGS.md`, `CLAUDE.md`, ovaj fajl, `(C) Plan implementacije (10 koraka).md`,
+> `run_synth_core.tcl`, `ncc_core_ooc.xdc`. **Nema tačke povratka za taj rad.**
+>
+> ### Pouke iz izvršavanja — plan je ispravljen na 11 mesta
+>
+> Sve greške su bile u planu ili u mojim brojkama, nijedna u izvršenju subagenata.
+> Najvrednije, i primenljive na Korake 9-10:
+>
+> - **Pravilo celog pasusa.** Kad izmena dopunjuje zatečeni tekst, pročitati **ceo** pasus
+>   — stara rečenica preživi kao „context" linija u diff-u i niko je ne vidi kao svoju.
+>   Tako su nađene tri protivrečnosti: §5.5 (dvostepena protočnost), §7.3 (predlagao
+>   registar koji je već dodat), §4.4 (deljena memorija koja ne postoji). Važi i za
+>   `<figcaption>` i `<caption>`.
+> - **Provere se puštaju POSLE poslednje izmene.** Dvostruka crtica u XML komentaru je
+>   ušla posle provere; browser to ne prikazuje kao grešku, pa je render prošao a
+>   sintaksa nije.
+> - **Rezerva se ne prevodi između ograničenja takta.** Videti `BUGS.md`.
+> - **Skraćenice imena signala su tri puta bile izmišljene** (`den_f`/`den_t`,
+>   `diff_f`/`diff_t`) — svako ime u `<span class="mono">` proveriti u RTL-u.
+> - **Sintaksna provera SVG-a ne hvata strelicu koja pokazuje u prazno** — obavezan
+>   render. Tako je nađeno da strelica `M05` prolazi kroz kutiju `proc_sys_reset`.
+> - **`svgcheck.py`** (provera SVG-a koja prvo razrešava HTML entitete) je opisana u
+>   planu, Task 2 Korak 6 — goli `xml.dom.minidom` daje lažnu grešku.
+
+## Ranije zabeleženo za sledeću sesiju
+
+> **KORACI 1-7 ZAVRŠENI; KORAK 8a i 8b IZMERENI** (stanje 2026-07-26).
+> Ne vraćati se na njih bez konkretnog razloga.
+>
+> ## Stanje sistema (post-route + phys_opt, `xc7z010clg400-1`)
+>
+> | | vrednost |
+> |---|---|
+> | Takt | **90,909 MHz** (traženo 95; PS PLL daje 1000/11) |
+> | WNS | **+0,170 ns** na 11,0 ns — **ZATVARA** |
+> | Fmax | ~97,7 MHz (100 MHz ne zatvara: −0,232 ns) |
+> | LUT | 6.261 / 17.600 = **35,6%** |
+> | FF | 5.024 / 35.200 = 14,3% |
+> | BRAM | 39 / 60 = **65,0%** |
+> | DSP | 18 / 80 = 22,5% |
+> | Latencija 90×90/25×15 | **2.461.201 taktova = 27,07 ms** |
+>
+> Po instanci: `ncc0`/`ncc1` po 1.910 LUT / 1.240 FF / 19 RAMB36 / 9 DSP;
+> `axi_interconnect_0` 1.616; `axi_cdma_0` 807.
+>
+> **Ceo tok se reprodukuje iz skripti:**
+> `vivado.bat -mode batch -source src/vhdl/script/run_impl.tcl`
+> (sam sourcuje `create_bd.tcl`; nosi kapije za blackbox IP, razilaženje kopija
+> izvora i negativan WNS).
+>
+> ## PRVO sledeći put — dovršiti Korak 8 (8c, 8d, 8e)
+>
+> **8c — propusnost/latencija.** Model latencije je re-izveden posle preseka u jezgru:
+> `T = 2·img_w·img_h + 2·N + res_w·res_h·(N + 112)`, gde je `N = tmp_w·tmp_h`
+> (bilo `N + 110`; +2 takta po prozoru od dva nova stepena). Provereno na merenju:
+> 2·8100 + 2·375 + 5016·487 = **2.459.742** naspram izmerenih 2.461.201 → 0,06%.
+> ⚠️ **Dve ispravke ove beleške (2026-07-26):** zbir je **2.459.742**, ne 2.459.712
+> (aritmetička greška od 30); i razlika **nije** od „prozora sa nultom varijansom koji
+> preskaču takt" — izmereno je *veće* od modela, a preskakanje bi ga učinilo *manjim*, uz
+> to 43 takta ne objašnjavaju 1.459. Ostatak je fiksna režija koju model ne obuhvata
+> (inicijalizacija FSM-a, deljenje pri računanju srednje vrednosti šablona); **mehanizam
+> nije izmeren**, pa se u dokumentaciji tako i piše.
+> Ekstrapolacija na 90×90/30×30: **3.783.652 takta = 41,6 ms** @ 90,909 MHz
+> (ESL/HLS referenca 10.360.183 taktova = 103,6 ms → **2,74× manje taktova**).
+> Po piksel-operaciji na istom poslu (30×30): **1,13 naspram 3,09**. ⚠️ Brojka 1,30 iz
+> ranijih beleški je sa **25×15** i ne ide uz 3,09 — sa njom bi ispalo 2,37×, što
+> protivreči odnosu taktova.
+>
+> **8d — dokumentacija.** Proširiti PDF (`02 Dokumentacija/*.html` → headless Edge)
+> poglavljem o integrisanom sistemu: topologija, adresna mapa, tabele 8a/8b iznad,
+> i objašnjenje zašto je takt 90,909 a ne 100.
+>
+> **8e — poređenje sa PEUSN, tu je prava odluka.** Frekvencija je u redu: 90,909
+> naspram 100 MHz = **9,1% odstupanja** (granica 20%). Problem je throughput: sa
+> softverskim optimizacijama 1/3/4 (Korak 9) izlazimo na **~1,7 s** naspram ESL
+> reference **3,667 s** → ~54% **u našu korist**, što formalno krši pravilo.
+> **Ne zasporavati veštački.** Ispravan pristup: rekalibrisati `K_CYC`
+> (`src/ncc.cpp:83`, sada `10360183/(61·61·30·30)`) našim izmerenim modelom, pustiti
+> SystemC model ponovo i porediti jabuke sa jabukama — tada se sistemski model i HW
+> moraju poklopiti unutar 20%, a razlika prema originalnoj ESL brojci se objašnjava
+> time što je naš RTL 2,74× efikasniji po piksel-operaciji od HLS reference.
+>
+> ## Otvoreno / nepotvrđeno
+>
+> 1. **Koja je tačno ploča** — `board_part` je `digilentinc.com:zybo-z7-10:part0:1.2`,
+>    ali korisnik nije imao ploču pred sobom. Part `xc7z010clg400-1` je siguran u oba
+>    slučaja; razlikuje se samo PS preset. Originalni Zybo: **VGA + 1× HDMI**, PS_CLK
+>    50 MHz, DDR3 512 MB (`digilentinc.com:zybo:part0:2.0`). Zybo Z7-10: **2× HDMI bez
+>    VGA**, MIPI CSI, PS_CLK 33,333 MHz, DDR3L 1 GB. Pogrešan preset = ne bootuje i
+>    UART je na pogrešnom baud rate-u → **bitno tek za Korak 9**, jedna linija u
+>    `create_bd.tcl`.
+> 2. **`.zip` arhiva IP-a je ZASTARELA** (popravke S01 + tipovi fajlova + revizija).
+>    Regenerisati u Koraku 10 kroz `package_ip.tcl`, koji **mora** na kraju pozvati
+>    `fix_ip_package.tcl` — wizard vraća `vhdlSource` i `ADDR_WIDTH=10`.
+> 3. **Za punih 100 MHz** ostaje jedna poluga koja NIJE primenjena: inkrementalno
+>    računanje adrese u unutrašnjoj petlji (registar + korak umesto množenja svaki
+>    takt). Objašnjeno u `BUGS.md`. Bio bi to **treći** zahvat u verifikovano jezgro.
+> 4. **Svesno odloženo:** `shared variable` u `dp_bram.vhd` nije protected tip, a fajl
+>    je sad deklarisan kao VHDL-2008. Vivado to spušta na upozorenje; striktniji alati
+>    (Questa/Riviera u -2008 režimu) bi odbili. Ne koristimo ih.
+> 5. **Git: ništa nije komitovano** (korisnik je rekao da commit nije bitan). Sve stoji
+>    nekomitovano na grani `korak6-axi-ip`. Korak 6 je komitovan (`70d8f9a`); `main`
+>    još ne sadrži ni Korak 6.
+>
+> ## Korak 7 (gotovo)
+>
+> Block design `ncc_system` = Zynq PS (board preset) + `proc_sys_reset` + 2× `ncc_accel`
+> + `axi_cdma` (mem-na-mem, simple mode) + **jedan `axi_interconnect`** (`STRATEGY=1`,
+> deljena magistrala, 2 mastera → 6 slave-ova). Jedan takt na sve, bez CDC.
+> `S_AXI_HP0` sužen na **32 bita**. Fiksna adresna mapa po ESL `common.hpp` — tabela u
+> projektnom `CLAUDE.md`. Dizajn: `01 Razvoj/(C) Korak 7 - Dizajn integracije
+> (block design).md`; plan: `(C) Korak 7 - Plan implementacije (block design).md`
+> (sadrži i tri greške nađene u samom planu, da se ne ponove).
 >
 > **Korak 6 (gotovo):** IP `ncc_accel` spakovan (slave + interne memorije, obrazac
 > matrix-multiply iz vežbe). Dizajn: `01 Razvoj/(C) Korak 6 - Dizajn AXI omotača
 > (IP pakovanje).md`; plan/koraci: `(C) Korak 6 - Plan implementacije (AXI IP).md`.
-> Izvori: `src/vhdl/ip/{dp_bram,mem_subsystem}.vhd`, modifikovani generisani
-> kontroleri u `src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0/hdl/`, TB
-> `src/vhdl/tb/ncc_accel_tb.vhd` (zlatni peak PASS). `.zip` arhiva IP-a u istom
-> ip_repo folderu.
+> Izvori su od Koraka 7 **konsolidovani u `src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0/`**
+> (`src/vhdl/ip/` je obrisan — bio je duplikat). `.zip` arhiva IP-a je **zastarela**
+> posle popravke S01, regeneriše se u Koraku 10.
 
 **Merodavan opis dizajna** je od sada PDF dokumentacija:
 `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-5.pdf` (izvor: `.html` pored
@@ -52,6 +250,136 @@ NE radi u ovoj verziji, ispravan naziv je `--no-pdf-header-footer` (inače Edge
 utisne datum i lokalnu putanju do fajla u zaglavlje/podnožje).
 
 ## Istorija sesija
+
+### 2026-07-26 (nastavak) — KORAK 8 ZAVRŠEN: dokumentacija proširena na Korake 2-8
+
+Nastavak istog dana. Korak 8 izvršen kroz **plan od 10 taskova**, prvo subagent-driven
+(Taskovi 1-4), pa inline zbog cene (Taskovi 5-10), sa nezavisnom recenzijom za Task 7.
+
+**Rezultat:** `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf` — **34 strane**
+(bilo 22), 24 tabele, 4 SVG dijagrama. Tri nova poglavlja (IP jezgro, integracija sa novim
+blok dijagramom, analiza sistema) i usklađena poglavlja 4-7. Deset commit-ova na
+`korak6-axi-ip`, od `8a999fb` do `ebf3346`.
+
+**Re-mereno pre pisanja, ne prepisano:** goli `ncc_core` post-route na `clg400-1`, na oba
+ograničenja takta. Nalaz koji je promenio zaključak projekta: **jezgro ZATVARA 100 MHz**
+(WNS +0,146 ns, Fmax ~101,5 MHz). Ograničenje je **integracija**, ne RTL — sistem na 10 ns
+daje −0,232 ns. `BUGS.md` naslov „ncc_core ne zatvara 100 MHz" je time povučen.
+
+**Sva šest testbencheva ponovo pušteno i prolaze** — presek jezgra (MAC pipeline + registar
+pred delilac) i popravka `wr_beat` nisu promenili izlaz: `0x80000000 @ (32,14)`,
+bit-identično Koraku 4. Latencija 2.461.201 takt, potvrđena nezavisno.
+
+**Jedanaest ispravki plana i beleški, sve nađene pri izvršavanju.** Tri klase:
+1. **Preživele zastarele tvrdnje** — §5.5 je opisivao dvostepenu protočnost pored nove
+   trostepene; §7.3 je predlagao registar koji je već dodat; §4.4 je tvrdio da postoji
+   deljena memorija koje nema. Sve tri su u diff-u bile „context" linije. Otud **pravilo
+   celog pasusa**.
+2. **Izmišljena imena signala** — `den_f`/`den_t` i `diff_f`/`diff_t` ne postoje u RTL-u.
+3. **Aritmetičke i metodološke greške u nasleđenim brojkama** — model je davao 2.459.742
+   a ne 2.459.712; „prozori sa nultom varijansom" ne mogu biti uzrok razlike (izmereno je
+   *veće* od modela); „1,30 vs 3,09 → 2,74×" ne stoji, jer je 1,30 sa 25×15 a 3,09 sa
+   30×30 (na istom poslu je 1,13).
+
+**Nov metodološki zapis u `BUGS.md`:** rezerva se ne prevodi aritmetički između ograničenja
+takta — alat optimizuje *do* cilja i staje, pa je putanja na labavijem ograničenju duža.
+Fmax izveden iz merenja na 11 ns davao je lažnih 94 MHz umesto 101,5. To je **četvrti**
+slučaj istog obrasca u projektu (uzrok iz jednog merenja), pa je `run_synth_core.tcl`
+parametrizovan da se meri na ograničenju koje se tvrdi.
+
+**8e po odluci korisnika bez rekalibracije `K_CYC`** — porede se resursi i taktovi, gde je
+poređenje pošteno; ukupno vreme table se ne problematizuje. SystemC nije instaliran.
+
+**Nekomitovano:** korisnik je odlučio da se njegovih 25 nekomitovanih fajlova ne dira, pa
+svaki commit dira samo ciljni HTML. Posledica: sve izmene Taska 10 (`BUGS.md`, `CLAUDE.md`,
+plan fajlovi, `run_synth_core.tcl`, `ncc_core_ooc.xdc`) **nisu komitovane**.
+
+### 2026-07-26 — Korak 8a/8b izmereni + code review otkrio 3 AXI buga
+
+Nastavak iste sesije. **Timing je dominirao danom** i završen je uspešno, ali kroz
+niz pogrešnih hipoteza koje vredi zapamtiti.
+
+**Timing: −3,299 → +0,170 ns**, kroz četiri mere (redosled je i redosled dobitka):
+1. **MAC pipeline** u `ncc_core` — `df_reg`/`dt_reg` + `mac_v_reg`, razdvaja
+   BRAM→oduzimanje od množenje→akumulator. **+2,43 ns.**
+2. **`phys_opt_design`** + `Performance_ExplorePostRoutePhysOpt` strategija.
+   **+0,481 ns** — više nego drugi RTL presek. Sad je deo build ugovora u
+   `create_bd.tcl`, ne opcija: bez toga dizajn ne zatvara.
+3. **SmartConnect → AXI Interconnect** (`STRATEGY=1`). Površina 8.673 → 1.616 LUT.
+4. **Registar pred delilac** (`num_sq_reg`/`den_prod_reg`, poluga iz `IDEJE.md`).
+   **+0,155 ns** — putanja se odmah premestila na adresnu.
+
+Uz to `S_AXI_HP0` sužen na 32 bita: uklonio 6 konvertora širine, **−3.334 LUT /
+−3.659 FF**. FSM jezgra 21 → 23 stanja, latencija **+0,41%**, izlaz **bit-identičan**.
+
+**Tri pogrešne hipoteze, sve isti obrazac — uzrok pripisan iz JEDNOG merenja:**
+- „Merenje je degenerisano zbog 118 IOB naspram 100" → OOC sinteza sa **nula** IOB-ova
+  dala istu razliku. Trebalo je odmah primetiti da je prekoračenje *veće* na partu
+  koji prolazi (218% vs 118%).
+- „Kritična putanja ide kroz konvertor širine, uklanjanje vraća 100 MHz" → konvertori
+  uklonjeni, WNS se pomerio sa −0,233 na −0,232 ns. Vezujuća putanja je sve vreme bila
+  adresna u `ncc_core`; konvertor se pojavio kao najgori samo u merenju na 11 ns.
+- „Odgovor daje Korak 8" kao razlog za odlaganje odluke → integracija timing može samo
+  pogoršati, odluka je bila potrebna odmah.
+
+**Code review (`/code-review`) našao 15 nalaza; 14 rešeno.** Najozbiljniji je klaster
+AXI handshake-a — i **nije bio teorijski**:
+- Generisani kontroleri drže `wready` na `'1'` od `Idle` nadalje, a korisnička logika je
+  dekodirala adresu bez kvalifikacije handshake-a. S00 je upisivao registre na golo
+  `S_AXI_WVALID` (bez `wready`, bez prihvaćenog AW).
+- Dokazano testom: nad starom logikom **7 od 8 beat-ova upisnog bursta se gubi**, a upis
+  sa `WSTRB(0)='0'` gazi piksel. Sa CDMA burst-ovima od 8100 reči = tiho pokvarena slika.
+- Popravljeno uvođenjem `wr_beat` (W uz prihvaćen AW) u oba kontrolera + poštovanje
+  `WSTRB(0)`. `ncc_accel_burst_tb` proširen sa tri provere (RLAST po beat-u, WSTRB,
+  rani AW) — **prvo dokazano da padaju nad starom logikom, pa da prolaze nad novom.**
+
+Ostali nalazi: WRAP burst look-ahead, `core_revision` + isključen IP keš, kapija za
+blackbox preseljena u repo (`run_impl.tcl`), kapija protiv razilaženja dve kopije
+izvora, `create_clock` pre `synth_design` (+ OOC režim), simulacione tvrdnje za
+dimenzije, dokumentovan ugovor o taktu S00/S01, `.gitignore`, i usklađena dokumentacija.
+Puni zapis u `BUGS.md`.
+
+**Nove skripte u repou:** `run_impl.tcl` (pun tok sa kapijama), `fix_ip_package.tcl`
+(post-package popravke, obavezno posle svakog Package IP-a), `ncc_core_ooc.xdc`,
+`open_bd.tcl`. `run_synth_core.tcl` prepravljen (OOC + constraint pre sinteze).
+
+### 2026-07-25 — Korak 7 ZAVRŠEN (block design) + popravljen bug u IP-u iz Koraka 6
+
+- **Odluka o DMA (bila otvorena od 24.07.):** korisnik je tražio da se PRVO detaljno
+  pročitaju svi kodovi pre odluke. To se isplatilo — čitanje generisanog
+  `ncc_accel_slave_full_v1_0_S01_AXI.vhd` je otkrilo da **burst čitanje ne radi**, što je
+  potpuno promenilo okvir odluke (CDMA čitanje rezultata bilo bi nemoguće).
+  Odabrano: **popravka + CDMA u oba smera**, umesto ranije preporuke „CPU-direktno".
+- **Nađen bug: S01 burst čitanje vraća prethodnu reč** na svakom beat-u posle prvog
+  (7/8 pogrešno na `arlen=7`); write burst-ovi rade 8/8. Uzrok: generisani Xilinx šablon
+  čita primer-RAM kombinaciono, a Korak 6 ga je zamenio registrovanim `dp_bram`-om i
+  popravio poravnanje **samo za prvi beat**. Nije uhvaćeno jer `ncc_accel_tb` koristi
+  isključivo `awlen=0`/`arlen=0`. Popravljeno look-ahead adresom; napisan
+  `src/vhdl/tb/ncc_accel_burst_tb.vhd` (RED pre, GREEN posle); zlatni TB nepromenjen
+  (`0x80000000 @ idx 956`). Puni zapis u `BUGS.md`.
+- **Korekcija ciljnog čipa:** vault je tvrdio „Zybo Z7-10 = `xc7z010-clg225-2`" — te dve
+  stvari nisu spojive. Provereno kroz Digilent board fajlove: **nijedna** Digilent ploča
+  ne koristi `clg225`; svaka Zynq-7010 je `xc7z010clg400-1`. `clg225-2` iz ESL
+  dokumentacije je bio Vitis HLS default, ne ploča. Part promenjen na `clg400-1`
+  (isti čip, identičan kapacitet, speed grade `-1`).
+- **Instalirani Digilent board files** (`zybo`, `zybo-z7-10`, `zybo-z7-20`) u
+  `C:\AMDDesignTools\2025.2\Vivado\data\boards\board_files\` — pre toga ih nije bilo
+  nijedan (0 `board.xml`), pa PS ne bi imao ispravan DDR/MIO/PS_CLK preset.
+- **Block design izgrađen TCL skriptom u batch-u**, bez GUI-a: `create_bd.tcl`,
+  `validate_bd_design` čist, wrapper elaborira. Fiksna adresna mapa po ESL `common.hpp`.
+- **Tri greške u sopstvenom planu, nađene pri izvršavanju** (zapisane u planu da se ne
+  ponove): (a) `M_AXI_GP0_ACLK`/`S_AXI_HP0_ACLK` moraju biti vezani u istom tasku u kome
+  se AXI portovi uključuju, inače `validate_bd_design` pada; (b) **`exclude_bd_addr_seg`
+  MORA ići posle svih `assign_bd_address`** — inače segment tiho nestane iz mape bez
+  ERROR-a (DDR je tako „nestao" iz CDMA mape); (c) `report_utilization -hierarchical_depth`
+  ne radi bez `-hierarchical`.
+- **Timing na novom partu je otvoreno pitanje, ne rešeno:** samostalna sinteza `ncc_core`
+  na `clg400-1` daje WNS **−0,660 ns**. Ali merenje je degenerisano (118 IOB naspram
+  100/54 dostupnih). Kontrolni eksperiment na `clg225-2` reprodukuje Korak 5 egzaktno
+  (+1,179 ns, 8,670 ns, ista raspodela) → tok je ispravan, merenje nije pouzdano.
+  **`ncc_core.vhd` NIJE diran** — bilo bi prerano menjati verifikovano jezgro na osnovu
+  takvog merenja. Odgovor daje Korak 8.
+- Izvori konsolidovani: `src/vhdl/ip/` obrisan (duplikat), `ip_repo` je jedini merodavan.
 
 ### 2026-07-24 — Korak 6 ZAVRŠEN (AXI IP pakovanje)
 - **Odluka arhitekture (potvrđena čitanjem celog PDF-a Vežbe 08-09, str. 229–302):**

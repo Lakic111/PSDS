@@ -7,6 +7,18 @@
 > (peak `0x80000000 @ idx 956`); IP spakovan + `.zip` arhiva. Task 8 (git) na
 > odobrenje korisnika.
 
+> **⚠️ NAKNADNA IZMENA (Korak 7, 2026-07-25) — putanje u ovom dokumentu su istorijske:**
+> `src/vhdl/ip/` **više ne postoji**. Izvori su konsolidovani u
+> `src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0/` (to je ono što `component.xml` referencira),
+> jer su dve kopije istih fajlova bile rizik — popraviti jednu, zaboraviti drugu.
+> Tekst zadataka ispod je zadržan kakav je bio (istorijski zapis šta se radilo),
+> ali su **`xvhdl` komande ažurirane** na `$IP` putanje da se mogu kopirati.
+> Mapiranje: `../ip/dp_bram.vhd` → `$IP/src/dp_bram.vhd`, isto za `mem_subsystem`;
+> `../ip/ncc_accel_v1_0*.vhd` → `$IP/hdl/ncc_accel_slave_{lite,full}_v1_0_S0{0,1}_AXI.vhd`
+> i `$IP/hdl/ncc_accel.vhd` (wizard je dao drugačija imena od plana).
+> Takođe u Koraku 7 je **popravljen bug u `S01_AXI`**: burst čitanje je vraćalo
+> prethodnu reč na svakom beat-u posle prvog. Videti `BUGS.md`.
+
 **Cilj:** spakovati `ncc_core` (nepromenjen) u AXI IP `ncc_accel` = AXI-Lite slave
 (kontrola) + AXI-Full slave (interne memorije slika/šablon/rezultat), verifikovan
 simulacijom pre pakovanja.
@@ -162,7 +174,8 @@ end architecture;
 - [ ] **Step 4: Pokreni — mora da PROĐE**
 
 ```bash
-xvhdl -2008 ../ip/dp_bram.vhd ../tb/dp_bram_tb.vhd
+IP="/c/Users/pc/Desktop/PSDS/src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0"
+xvhdl -2008 "$IP/src/dp_bram.vhd" ../tb/dp_bram_tb.vhd
 xelab -debug typical dp_bram_tb -s dp_bram_sim && xsim dp_bram_sim -runall
 ```
 Expected: `PASS: dp_bram`.
@@ -252,7 +265,8 @@ end architecture;
 
 ```bash
 cd "/c/Users/pc/Desktop/PSDS/src/vhdl/work_ip"
-xvhdl -2008 ../ip/dp_bram.vhd ../tb/mem_subsystem_tb.vhd
+IP="/c/Users/pc/Desktop/PSDS/src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0"
+xvhdl -2008 "$IP/src/dp_bram.vhd" ../tb/mem_subsystem_tb.vhd
 ```
 Expected: FAIL — `work.mem_subsystem` nije pronađen.
 
@@ -325,7 +339,8 @@ end architecture;
 - [ ] **Step 4: Pokreni — mora da PROĐE**
 
 ```bash
-xvhdl -2008 ../ip/dp_bram.vhd ../ip/mem_subsystem.vhd ../tb/mem_subsystem_tb.vhd
+IP="/c/Users/pc/Desktop/PSDS/src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0"
+xvhdl -2008 "$IP/src/dp_bram.vhd" "$IP/src/mem_subsystem.vhd" ../tb/mem_subsystem_tb.vhd
 xelab -debug typical mem_subsystem_tb -s ms_sim && xsim ms_sim -runall
 ```
 Expected: `PASS: mem_subsystem`.
@@ -651,9 +666,12 @@ end architecture;
 
 ```bash
 cd "/c/Users/pc/Desktop/PSDS/src/vhdl/work_ip"
-xvhdl -2008 ../ncc_pkg.vhd ../ncc_core.vhd ../ip/dp_bram.vhd ../ip/mem_subsystem.vhd \
-  ../ip/ncc_accel_v1_0_S00_AXI.vhd ../ip/ncc_accel_v1_0_S01_AXI.vhd \
-  ../ip/ncc_accel_v1_0.vhd ../tb/ncc_accel_tb.vhd
+IP="/c/Users/pc/Desktop/PSDS/src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0"
+xvhdl -2008 "$IP/src/ncc_pkg.vhd" "$IP/src/ncc_core.vhd" "$IP/src/dp_bram.vhd" \
+  "$IP/src/mem_subsystem.vhd" \
+  "$IP/hdl/ncc_accel_slave_lite_v1_0_S00_AXI.vhd" \
+  "$IP/hdl/ncc_accel_slave_full_v1_0_S01_AXI.vhd" \
+  "$IP/hdl/ncc_accel.vhd" ../tb/ncc_accel_tb.vhd
 xelab -debug typical ncc_accel_tb -s accel_sim && xsim accel_sim -runall
 ```
 Expected (prvi prolaz): FAIL/assert — dijagnostikovati (AXI handshake, 1-taktna
