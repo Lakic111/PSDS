@@ -6,6 +6,7 @@ entity ncc_accel_burst_tb is end entity;
 architecture beh of ncc_accel_burst_tb is
     constant OFF_IMG : integer := 16#00000#;   -- region slike u S01
     constant NB      : integer := 8;           -- beat-ova u burst-u (arlen/awlen = NB-1)
+    constant TIMEOUT : integer := 500;         -- takt-ova pre nego sto handshake petlja prijavi FAIL
 
     signal clk : std_logic := '0';
     signal aresetn : std_logic := '0';
@@ -99,30 +100,90 @@ begin
         );
 
     stim: process
-        -- single-beat upis (poznato ispravan iz Koraka 6)
-        procedure full_write1(addr : integer; data : integer) is
+        -- Drzi AWVALID dok AW ne bude prihvacen (AXI4: VALID stoji dok READY nije '1').
+        procedure send_aw(addr : integer; len : integer) is
+            variable cnt : integer := 0;
         begin
             s01_awaddr  <= std_logic_vector(to_unsigned(addr,17));
-            s01_awlen   <= (others=>'0'); s01_awsize <= "010"; s01_awburst <= "01";
+            s01_awlen   <= std_logic_vector(to_unsigned(len,8));
+            s01_awsize  <= "010"; s01_awburst <= "01";
             s01_awvalid <= '1';
-            s01_wdata   <= std_logic_vector(to_unsigned(data,32));
-            s01_wstrb   <= "1111"; s01_wlast <= '1'; s01_wvalid <= '1'; s01_bready <= '1';
-            wait until rising_edge(clk);
-            s01_awvalid <= '0'; s01_wvalid <= '0'; s01_wlast <= '0';
-            loop wait until rising_edge(clk); exit when s01_bvalid='1'; end loop;
+            loop
+                wait until rising_edge(clk);
+                cnt := cnt + 1;
+                assert cnt < TIMEOUT
+                    report "TIMEOUT: AWREADY se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                    severity failure;
+                exit when s01_awready = '1';
+            end loop;
+            s01_awvalid <= '0';
+        end procedure;
+
+        -- Drzi WVALID dok W beat ne bude prihvacen (AXI4: VALID stoji dok READY nije '1').
+        procedure send_w(data : integer; last : boolean; wstrb : std_logic_vector(3 downto 0) := "1111") is
+            variable cnt : integer := 0;
+        begin
+            s01_wdata  <= std_logic_vector(to_unsigned(data,32));
+            s01_wstrb  <= wstrb;
+            if last then s01_wlast <= '1'; else s01_wlast <= '0'; end if;
+            s01_wvalid <= '1';
+            loop
+                wait until rising_edge(clk);
+                cnt := cnt + 1;
+                assert cnt < TIMEOUT
+                    report "TIMEOUT: WREADY se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                    severity failure;
+                exit when s01_wready = '1';
+            end loop;
+            s01_wvalid <= '0'; s01_wlast <= '0';
+        end procedure;
+
+        -- single-beat upis; AW i W se salju sekvencijalno (AXI ne trazi da budu
+        -- istovremeno prihvaceni), svaki drzi svoj VALID dok READY ne stigne.
+        procedure full_write1(addr : integer; data : integer; wstrb : std_logic_vector(3 downto 0) := "1111") is
+            variable cnt : integer := 0;
+        begin
+            send_aw(addr, 0);
+            send_w(data, true, wstrb);
+            s01_bready <= '1';
+            cnt := 0;
+            loop
+                wait until rising_edge(clk);
+                cnt := cnt + 1;
+                assert cnt < TIMEOUT
+                    report "TIMEOUT: BVALID se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                    severity failure;
+                exit when s01_bvalid='1';
+            end loop;
             s01_bready <= '0';
             wait until rising_edge(clk);
         end procedure;
 
         -- single-beat citanje (poznato ispravno iz Koraka 6)
         procedure full_read1(addr : integer; res : out std_logic_vector(31 downto 0)) is
+            variable cnt : integer := 0;
         begin
             s01_araddr  <= std_logic_vector(to_unsigned(addr,17));
             s01_arlen   <= (others=>'0'); s01_arsize <= "010"; s01_arburst <= "01";
             s01_arvalid <= '1'; s01_rready <= '1';
-            wait until rising_edge(clk);
+            loop
+                wait until rising_edge(clk);
+                cnt := cnt + 1;
+                assert cnt < TIMEOUT
+                    report "TIMEOUT: ARREADY se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                    severity failure;
+                exit when s01_arready = '1';
+            end loop;
             s01_arvalid <= '0';
-            loop wait until rising_edge(clk); exit when s01_rvalid='1'; end loop;
+            cnt := 0;
+            loop
+                wait until rising_edge(clk);
+                cnt := cnt + 1;
+                assert cnt < TIMEOUT
+                    report "TIMEOUT: RVALID se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                    severity failure;
+                exit when s01_rvalid='1';
+            end loop;
             res := s01_rdata;
             s01_rready <= '0';
             wait until rising_edge(clk);
@@ -132,6 +193,8 @@ begin
         variable got : integer;
         variable nfail_rd, nfail_wr : integer := 0;
         variable nfail_last, nfail_strb, nfail_aw : integer := 0;
+        variable tcnt : integer := 0;
+        variable bvalid1_seen, awready2_seen : boolean;
     begin
         aresetn <= '0';
         for i in 0 to 9 loop wait until rising_edge(clk); end loop;
@@ -153,10 +216,26 @@ begin
         s01_arlen   <= std_logic_vector(to_unsigned(NB-1, 8));
         s01_arsize  <= "010"; s01_arburst <= "01";
         s01_arvalid <= '1'; s01_rready <= '1';
-        wait until rising_edge(clk);           -- arready je '1' -> handshake ovde
+        tcnt := 0;
+        loop
+            wait until rising_edge(clk);
+            tcnt := tcnt + 1;
+            assert tcnt < TIMEOUT
+                report "TIMEOUT: ARREADY (TEST1) se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                severity failure;
+            exit when s01_arready = '1';
+        end loop;
         s01_arvalid <= '0';
         for k in 0 to NB-1 loop
-            loop wait until rising_edge(clk); exit when s01_rvalid='1'; end loop;
+            tcnt := 0;
+            loop
+                wait until rising_edge(clk);
+                tcnt := tcnt + 1;
+                assert tcnt < TIMEOUT
+                    report "TIMEOUT: RVALID (TEST1, beat " & integer'image(k) & ") se nije podiglo"
+                    severity failure;
+                exit when s01_rvalid='1';
+            end loop;
             got := to_integer(unsigned(s01_rdata));
             report "  READ  beat " & integer'image(k) &
                    ": ocekivano " & integer'image(16#20# + k) &
@@ -175,21 +254,20 @@ begin
         ------------------------------------------------------------------
         -- C) TEST 2: multi-beat INCR WRITE burst, provera single-beat citanjem
         ------------------------------------------------------------------
-        s01_awaddr  <= std_logic_vector(to_unsigned(OFF_IMG + 64*4, 17));
-        s01_awlen   <= std_logic_vector(to_unsigned(NB-1, 8));
-        s01_awsize  <= "010"; s01_awburst <= "01";
-        s01_awvalid <= '1';
-        s01_wdata   <= std_logic_vector(to_unsigned(16#50#, 32));
-        s01_wstrb   <= "1111"; s01_wvalid <= '1'; s01_wlast <= '0'; s01_bready <= '1';
-        wait until rising_edge(clk);           -- beat 0 (aw + w istovremeno)
-        s01_awvalid <= '0';
-        for k in 1 to NB-1 loop
-            s01_wdata <= std_logic_vector(to_unsigned(16#50# + k, 32));
-            if k = NB-1 then s01_wlast <= '1'; end if;
-            wait until rising_edge(clk);
+        send_aw(OFF_IMG + 64*4, NB-1);
+        s01_bready <= '1';
+        for k in 0 to NB-1 loop
+            send_w(16#50# + k, k = NB-1);
         end loop;
-        s01_wvalid <= '0'; s01_wlast <= '0';
-        loop wait until rising_edge(clk); exit when s01_bvalid='1'; end loop;
+        tcnt := 0;
+        loop
+            wait until rising_edge(clk);
+            tcnt := tcnt + 1;
+            assert tcnt < TIMEOUT
+                report "TIMEOUT: BVALID (TEST2) se nije podiglo u " & integer'image(TIMEOUT) & " taktova"
+                severity failure;
+            exit when s01_bvalid='1';
+        end loop;
         s01_bready <= '0';
         wait until rising_edge(clk);
 
@@ -207,17 +285,7 @@ begin
         -- promeni piksel (mem_subsystem pamti samo donji bajt).
         ------------------------------------------------------------------
         full_write1(OFF_IMG + 200*4, 16#3C#);          -- poznata polazna vrednost
-        s01_awaddr  <= std_logic_vector(to_unsigned(OFF_IMG + 200*4, 17));
-        s01_awlen   <= (others=>'0'); s01_awsize <= "010"; s01_awburst <= "01";
-        s01_awvalid <= '1';
-        s01_wdata   <= x"000000AA";
-        s01_wstrb   <= "1110";                         -- bajt 0 ISKLJUCEN
-        s01_wlast   <= '1'; s01_wvalid <= '1'; s01_bready <= '1';
-        wait until rising_edge(clk);
-        s01_awvalid <= '0'; s01_wvalid <= '0'; s01_wlast <= '0';
-        loop wait until rising_edge(clk); exit when s01_bvalid='1'; end loop;
-        s01_bready <= '0'; s01_wstrb <= "1111";
-        wait until rising_edge(clk);
+        full_write1(OFF_IMG + 200*4, 16#AA#, "1110");  -- bajt 0 ISKLJUCEN
 
         full_read1(OFF_IMG + 200*4, rd);
         got := to_integer(unsigned(rd));
@@ -229,33 +297,52 @@ begin
         -- E) TEST 4: rani AW sledece transakcije NE SME da otme adresu
         -- beat-ovima bursta koji jos tece. AXI dozvoljava masteru da drzi
         -- AWVALID za sledecu transakciju dok W beat-ovi tekuce jos idu.
+        -- Sa popravljenim RTL-om AWREADY pada cim je AW1 prihvacen, pa
+        -- drzanje AWVALID za AW2 tokom bursta je bezopasno; AW2 se prihvata
+        -- tek kad se FSM vrati u Waddr (posto je BVALID za prvu transakciju
+        -- vec izdato).
         ------------------------------------------------------------------
         s01_bready  <= '1';
-        s01_awaddr  <= std_logic_vector(to_unsigned(OFF_IMG + 300*4, 17));
-        s01_awlen   <= std_logic_vector(to_unsigned(NB-1, 8));
-        s01_awsize  <= "010"; s01_awburst <= "01";
-        s01_awvalid <= '1';
-        s01_wdata   <= std_logic_vector(to_unsigned(16#60#, 32));
-        s01_wstrb   <= "1111"; s01_wvalid <= '1'; s01_wlast <= '0';
-        wait until rising_edge(clk);                   -- beat 0 + AW1 prihvaceni
+        send_aw(OFF_IMG + 300*4, NB-1);
+        send_w(16#60#, false);
         -- od sada drzimo AWVALID za DRUGU transakciju (img[400]) dok prva tece
         s01_awaddr  <= std_logic_vector(to_unsigned(OFF_IMG + 400*4, 17));
         s01_awlen   <= (others=>'0');
         s01_awvalid <= '1';
         for k in 1 to NB-1 loop
-            s01_wdata <= std_logic_vector(to_unsigned(16#60# + k, 32));
-            if k = NB-1 then s01_wlast <= '1'; end if;
-            wait until rising_edge(clk);
+            send_w(16#60# + k, k = NB-1);
         end loop;
-        s01_wlast <= '0';
-        -- prva transakcija gotova; sada dovrsavamo drugu (AW je vec na magistrali)
-        s01_wdata <= x"000000E5"; s01_wlast <= '1'; s01_wvalid <= '1';
-        loop wait until rising_edge(clk); exit when s01_awready = '1'; end loop;
-        s01_awvalid <= '0';
-        wait until rising_edge(clk);
-        s01_wvalid <= '0'; s01_wlast <= '0';
-        for i in 0 to 5 loop wait until rising_edge(clk); end loop;
+        -- prva transakcija gotova (BVALID) i AW2 prihvacen (AWREADY) mogu
+        -- stici na razlicitim ili na istom taktu -- pratimo oba dok se oba
+        -- ne dese.
+        bvalid1_seen := false;
+        awready2_seen := false;
+        tcnt := 0;
+        loop
+            wait until rising_edge(clk);
+            tcnt := tcnt + 1;
+            assert tcnt < TIMEOUT
+                report "TIMEOUT: BVALID(tx1)/AWREADY(tx2) (TEST4) se nisu podigli"
+                severity failure;
+            if s01_bvalid = '1' then bvalid1_seen := true; end if;
+            if s01_awready = '1' and not awready2_seen then
+                awready2_seen := true;
+                s01_awvalid <= '0';
+            end if;
+            exit when bvalid1_seen and awready2_seen;
+        end loop;
+        send_w(16#E5#, true);
+        tcnt := 0;
+        loop
+            wait until rising_edge(clk);
+            tcnt := tcnt + 1;
+            assert tcnt < TIMEOUT
+                report "TIMEOUT: BVALID(tx2) (TEST4) se nije podiglo"
+                severity failure;
+            exit when s01_bvalid = '1';
+        end loop;
         s01_bready <= '0';
+        wait until rising_edge(clk);
 
         for k in 0 to NB-1 loop
             full_read1(OFF_IMG + (300+k)*4, rd);
