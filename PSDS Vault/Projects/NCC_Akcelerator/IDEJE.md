@@ -54,3 +54,27 @@ vrednostima (strogo između 0 i 2³¹), bliže tome kako sistem stvarno radi nad
 Posao je na testbenčevima (izvući takav par segment/šablon iz realnih podataka i
 uporediti sa C kernelom iz Koraka 1), ne na samom jezgru. Ideja sa pregleda
 dokumentacije (23.07.2026).
+
+## Kvadriranje: DSP u OOC-u, CARRY4 u sistemu — možda 100 MHz bez izmene RTL-a
+
+Zapaženo pri kontrolnom merenju na 10 ns (2026-08-26), **nije provereno** — trag,
+ne nalaz.
+
+Ista putanja `sum_num_reg → num_sq_reg` (kvadriranje brojioca pred deliocem)
+implementira se **različito** zavisno od toga da li se gradi golo jezgro ili sistem:
+
+| | nivoa | primitive | WNS na 10 ns |
+|---|---|---|---|
+| golo jezgro, OOC | 12 | **DSP48E1 = 2** | **+0,146 ns** |
+| ceo sistem | 13 | **CARRY4 = 8**, bez DSP-a | −0,054 ns |
+
+DSP-ova ima — 9 po instanci u oba slučaja — ali ih alat u sistemskoj gradnji nije
+upotrebio na *toj* putanji.
+
+Ako se ikad zatraži punih 100 MHz, ovo je **prvo** mesto za gledanje, pre bilo kakvog
+zahvata u verifikovano jezgro: možda je dovoljno naterati alat na isto mapiranje
+(`USE_DSP` atribut na signalu/procesu, ili direktiva sinteze), bez ijedne izmene
+logike. Za razliku od dodatnog protočnog stepena, ne košta ni takt latencije.
+
+Provera bi bila jedno merenje: `set NCC_FCLK 100` uz atribut, pa uporediti sa
+−0,054 ns. Videti `BUGS.md` za kontekst merenja.

@@ -93,5 +93,29 @@ if {[info exists NCC_SKIP_BITSTREAM] && $NCC_SKIP_BITSTREAM} {
         error "BITSTREAM: write_bitstream je prosao ali $BITFILE ne postoji"
     }
     puts "@@@ BITSTREAM OK: $BITFILE ([file size $BITFILE] B)"
+
+    # --- XSA za Vitis (Korak 9) --------------------------------------------
+    # -fixed: staticna platforma (nema DFX rekonfiguracije).
+    # -include_bit: bitstream ULAZI u arhivu -- bez toga Vitis napravi platformu
+    # koja se kompajlira i linkuje bez greske, ali PL ostane nekonfigurisan i
+    # citanje kontrolnih registara vraca smece. Tiha greska, kao blackbox.
+    puts "@@@ ============ XSA (Korak 9) ============"
+    set XSAFILE [file join $NCC_PROJ_DIR ${BD_NAME}_wrapper.xsa]
+    write_hw_platform -fixed -include_bit -force $XSAFILE
+    if {![file exists $XSAFILE]} {
+        error "XSA: write_hw_platform je prosao ali $XSAFILE ne postoji"
+    }
+    # KAPIJA 4: arhiva MORA sadrzati .bit. Provera je stvarna, ne pretpostavka --
+    # .xsa je obican zip.
+    set has_bit 0
+    if {![catch {exec unzip -l $XSAFILE} zl]} {
+        if {[string match "*.bit*" $zl]} { set has_bit 1 }
+    } else {
+        # bez unzip-a: trazi ime .bit u sirovim bajtovima arhive
+        set fh [open $XSAFILE rb]; set raw [read $fh]; close $fh
+        if {[string match "*.bit*" $raw]} { set has_bit 1 }
+    }
+    if {!$has_bit} { error "KAPIJA 4: u $XSAFILE nema bitstream-a" }
+    puts "@@@ XSA OK: $XSAFILE ([file size $XSAFILE] B, sadrzi .bit)"
 }
 puts "@@@ GOTOVO"

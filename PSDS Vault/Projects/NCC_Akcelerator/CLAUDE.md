@@ -283,7 +283,12 @@ Sužavanje bi spustilo BRAM sa 9 na ~6 blokova. Nije urađeno jer 15% nije usko 
       - [x] **Task 1 (2026-08-26): bitstream.** `write_bitstream` + KAPIJA 3 (ne pravi
         bitstream ako timing ne zatvara) dodati u `run_impl.tcl`. Izmereno: DRC 0
         grešaka, `.bit` 2.083.870 B.
-      - [ ] Task 2: export XSA sa bitstream-om
+      - [x] **Task 2 (2026-08-26): XSA.** `write_hw_platform -fixed -include_bit` +
+        KAPIJA 4 (arhiva mora sadržati `.bit`) u `run_impl.tcl`. Izmereno:
+        `ncc_system_wrapper.xsa` 568.527 B; `.bit` unutra je **bajt-identičan**
+        samostalnom (sha256 se poklapa), DDR segment `0x0`–`0x1FFFFFFF` (512 MB),
+        adresna mapa i `ps7_init.c` prisutni. Putanja:
+        `src/vhdl/result/ncc_system/ncc_system_wrapper.xsa` (gitignorisano).
       - [ ] Task 3: bare-metal aplikacija u Vitisu
 - [ ] Korak 10: TCL skripta za automatizaciju celog Vivado toka [10 bodova]
       (skeleton u `Vezbe/(C) Vezba 13 - Design Constraining i TCL Scripting.md`)
