@@ -39,11 +39,11 @@ upiši `CTRL=1`, pa prozivaj `STATUS` dok bit0 ne postane 1.
 
 ### 2.2 Memorije (S01, AXI-Full), po instanci
 
-| Region | Offset od `mem_base` | Kapacitet | Naše korišćenje |
-|---|---|---|---|
-| slika | `+0x00000` | 32 KB = 8192 reči | 90×90 = **8100** reči (taman) |
-| šablon | `+0x08000` | 32 KB = 8192 reči | 90×30 = 2700 reči |
-| rezultat | `+0x10000` | 64 KB | 61 (fino) / 31 (grubo) |
+| Region   | Offset od `mem_base` | Kapacitet         | Naše korišćenje               |
+| -------- | -------------------- | ----------------- | ----------------------------- |
+| slika    | `+0x00000`           | 32 KB = 8192 reči | 90×90 = **8100** reči (taman) |
+| šablon   | `+0x08000`           | 32 KB = 8192 reči | 90×30 = 2700 reči             |
+| rezultat | `+0x10000`           | 64 KB             | 61 (fino) / 31 (grubo)        |
 
 **Jedan piksel po 32-bitnoj reči.** U DDR-u su bajtovi → softver mora širiti 8→32 bita
 pre prenosa. CDMA kopira bez konverzije formata.
@@ -101,7 +101,7 @@ int  ncc_load_image(const ncc_dev_t*, const u8* px, u32 count);   /* u8->u32, fl
 int  ncc_load_tmpl (const ncc_dev_t*, const u8* px, u32 count);
 void ncc_start     (const ncc_dev_t*);
 int  ncc_wait_done (const ncc_dev_t*, u32 timeout_us);            /* prozivanje STATUS.bit0 */
-u32  ncc_best_score(const ncc_dev_t*, u32 n_results);             /* poređenje kao u32 */
+u32  ncc_best_score(const ncc_dev_t*, u32 n_results, u32 *idx_out); /* poređenje kao u32 */
 ```
 
 **Zašto ova granica:** faza 4 bring-upa (uvođenje CDMA) menja **samo** `ncc_load_*`.
