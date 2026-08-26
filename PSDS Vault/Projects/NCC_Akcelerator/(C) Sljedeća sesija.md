@@ -35,6 +35,34 @@
 > isti, ali PS preset nije — tajming i FCLK se moraju **ponovo potvrditi** pri prvom
 > pokretanju (`create_bd.tcl` sam štampa PS_CLK, DDR partno i FCLK0).
 >
+> ### ✅ Izmereno sa Zybo presetom 2026-08-26 — TAJMING ZATVARA
+>
+> `run_impl.tcl` pušten sa `part0:2.0`; obe kapije prošle (nema blackbox-a, WNS ≥ 0).
+> Vivado potvrdio preset: `PS_CLK=50.000000 DDR=MT41K128M16 JT-125 FCLK0=95`,
+> DDR segment `0x20000000` (512 MB).
+>
+> | | Z7-10 preset (staro) | **Zybo preset (novo)** |
+> |---|---|---|
+> | Takt | 90,909 MHz | **90,909 MHz** (period 11,0 ns) |
+> | WNS | +0,170 ns | **+0,181 ns** |
+> | LUT | 6.261 (35,6%) | 6.274 (35,65%) |
+> | FF | 5.024 (14,3%) | 5.024 (14,27%) |
+> | BRAM | 39 (65,0%) | 39 (65,0%) |
+> | DSP | 18 (22,5%) | 18 (22,5%) |
+>
+> **Promena preseta praktično nije pomerila ništa** — WNS +0,011 ns, LUT +13. Očekivano:
+> PS preset menja MIO, DDR kontroler i PLL, a kritična putanja je u PL-u. Ostala je
+> adresna, kako je i zapisano:
+>
+> ```
+> ncc0/core_inst/v_reg_reg[1] → ncc0/ms_inst/img_mem/ram_reg_1/ADDRBWRADDR[14]
+> 9,896 ns   logika 4,384 (44%) / rutiranje 5,512 (56%)   10 nivoa, CARRY4=6
+> ```
+>
+> **Posledica: brojke Koraka 7 i 8 u PDF-u OSTAJU VAŽEĆE — ne treba prepravljati.**
+> Jedina stvarna promena za Korak 9: DDR je **512 MB**, baferi moraju stati ispod
+> `0x1FFFFFFF`.
+>
 > Razlike između varijanti, za istoriju:
 >
 > | | Zybo (originalni) | Zybo Z7-10 |
