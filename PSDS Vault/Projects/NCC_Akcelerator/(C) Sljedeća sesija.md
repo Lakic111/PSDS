@@ -64,6 +64,27 @@ projekat `C:/ncc100`, ispis u scratchpad `run100_out.txt`). Pošto su popravke n
 donijele +0,087 ns, **moguće je da sistem sada zatvara 100 MHz** — što bi promijenilo
 zaključak dokumenta.
 
+**Gdje naći rezultat.** Ispis je u scratchpadu sesije
+(`run100_out.txt`), ali taj direktorijum se može očistiti. Trajna kopija je **sam Vivado
+projekat na `C:
+cc100`** — otvori ga i pročitaj tajming bez ponovne sinteze:
+
+```tcl
+open_project C:/ncc100/ncc_system.xpr
+open_run impl_1
+report_timing_summary -delay_type max -max_paths 1
+```
+
+Ako ni toga nema, mjerenje se ponavlja iz repoa (~40 min), jer je `NCC_FCLK` sada
+parametar u `create_bd.tcl`:
+
+```tcl
+set NCC_PROJ_DIR       C:/ncc100
+set NCC_FCLK           100
+set NCC_SKIP_BITSTREAM 1
+source src/vhdl/script/run_impl.tcl
+```
+
 **PDF nije regenerisan** poslije te izmjene i čeka taj rezultat. Sve ostalo u HTML-u je
 ažurno (Tabele 19-21, 25, 26, zaključak).
 
