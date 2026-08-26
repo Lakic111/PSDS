@@ -43,6 +43,41 @@ static void test_downsample_zaokruzivanje(void) {
     CHECK(dst[0] == 0, "s=1 mora dati 0");
 }
 
+/* Sinteticki testovi za logic_center_mean / logic_is_empty -- ne zavise od data.h,
+   brzi su i samostalni. Segment mora biti dovoljno veliki da centar (redovi/kolone
+   29..59 od (sx, sy)) i pixel (sy+10, sx+10) stanu unutar slike -- 100x100 je dovoljno
+   za sx = sy = 0. */
+static void test_center_mean_uniform(void) {
+    unsigned char img[100 * 100];
+    int i;
+    for (i = 0; i < 100 * 100; i++) img[i] = 50;
+    CHECK(logic_center_mean(img, 100, 0, 0) == 50, "center_mean na ujednacenoj povrsini vraca konstantu");
+    CHECK(logic_is_empty(img, 100, 0, 0) == 1, "ujednacena povrsina -> prazno polje");
+}
+
+static void test_is_empty_center_pixel_differs(void) {
+    unsigned char img[100 * 100];
+    int i;
+    for (i = 0; i < 100 * 100; i++) img[i] = 50;
+    img[10 * 100 + 10] = 200; /* sx = sy = 0 -> pixel (10,10) */
+    CHECK(logic_is_empty(img, 100, 0, 0) == 0, "razlicit pixel (10,10) -> nije prazno polje");
+    CHECK(logic_center_mean(img, 100, 0, 0) == 50, "center_mean i dalje 50 -- (10,10) je van centra 29..59");
+}
+
+static void test_center_mean_known_sample(void) {
+    unsigned char img[100 * 100];
+    int i, x, y;
+    for (i = 0; i < 100 * 100; i++) img[i] = 7;
+    for (y = 29; y <= 44; y++)          /* 16 redova centra */
+        for (x = 29; x <= 59; x++)      /* svih 31 kolona */
+            img[y * 100 + x] = 20;
+    /* Rucno izracunato: 16 redova * 31 kolonu = 496 celija sa vrednoscu 20,
+       ostatak centra (15 redova * 31 kolonu = 465 celija) je 7.
+       Suma = 496*20 + 465*7 = 9920 + 3255 = 13175.
+       cnt = 31*31 = 961. mean = 13175 / 961 = 13 (celobrojno deljenje). */
+    CHECK(logic_center_mean(img, 100, 0, 0) == 13, "center_mean na poznatom uzorku daje 13");
+}
+
 static void test_fen_empty_board(void) {
     char b[8][8]; memset(b, ' ', sizeof b);
     char out[128];
@@ -56,8 +91,30 @@ static void test_fen_mixed(void) {
     b[7][4] = 'K';                        /* red: 4K3 */
     char out[128];
     logic_fen(b, out, sizeof out);
-    CHECK(strncmp(out, "r6r/", 4) == 0, "prvi red r6r");
-    CHECK(strstr(out, "/4K3") != NULL,  "poslednji red 4K3");
+    CHECK(strcmp(out, "r6r/8/8/8/8/8/8/4K3") == 0, "puna fen linija za mesovitu tablu");
+}
+
+static void test_fen_figure_in_middle(void) {
+    char b[8][8]; memset(b, ' ', sizeof b);
+    b[3][3] = 'p';                        /* red: 3p4 (3 + 1 + 4 = 8) */
+    char out[128];
+    logic_fen(b, out, sizeof out);
+    CHECK(strcmp(out, "8/8/8/3p4/8/8/8/8") == 0, "figura u sredini reda -> 3p4");
+}
+
+static void test_fen_small_buffer(void) {
+    char b[8][8]; memset(b, ' ', sizeof b);
+
+    char out1[1];
+    out1[0] = 'X';
+    logic_fen(b, out1, 1);
+    CHECK(out1[0] == '\0', "out_sz=1: samo null terminator, bez upisa van granica");
+
+    char out2[2];
+    out2[0] = 'X'; out2[1] = 'X';
+    logic_fen(b, out2, 2);
+    CHECK(strlen(out2) <= 1, "out_sz=2: sadrzaj ne prelazi granicu bafera");
+    CHECK(out2[strlen(out2)] == '\0', "out_sz=2: rezultat je null-terminisan");
 }
 
 static void test_is_white(void) {
@@ -70,8 +127,13 @@ int main(void) {
     test_max_u32();
     test_downsample();
     test_downsample_zaokruzivanje();
+    test_center_mean_uniform();
+    test_is_empty_center_pixel_differs();
+    test_center_mean_known_sample();
     test_fen_empty_board();
     test_fen_mixed();
+    test_fen_figure_in_middle();
+    test_fen_small_buffer();
     test_is_white();
     if (fails == 0) { printf("SVI TESTOVI PROSLI\n"); return 0; }
     printf("%d testova palo\n", fails);
