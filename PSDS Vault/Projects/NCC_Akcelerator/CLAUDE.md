@@ -289,6 +289,14 @@ Sužavanje bi spustilo BRAM sa 9 na ~6 blokova. Nije urađeno jer 15% nije usko 
         samostalnom (sha256 se poklapa), DDR segment `0x0`–`0x1FFFFFFF` (512 MB),
         adresna mapa i `ps7_init.c` prisutni. Putanja:
         `src/vhdl/result/ncc_system/ncc_system_wrapper.xsa` (gitignorisano).
+      - [x] **Ploča povezana i bitstream ISPROBAN NA HARDVERU (2026-08-26).**
+        JTAG meta `localhost:3121/xilinx_tcf/Digilent/210279A430A6A`; uređaji
+        `xc7z010_1` (**IDCODE 0x13722093 = Zynq XC7Z010**, čip sada POTVRĐEN merenjem,
+        ne zaključkom) i `arm_dap_0` (PS dostupan za Vitis debug).
+        Posle `program_hw_devices`: `DONE_PIN=1`, `EOS=1`, `PLL_LOCK=1`,
+        `DCI_MATCH=1`, `CRC_ERROR=0`, `IDCODE_ERROR=0`, `BAD_PACKET_ERROR=0`.
+        `MODE_PIN M[2:0]=111` → JTAG boot. **Dizajn, bitstream i ploča su ispravni** —
+        svaki kasniji kvar traži se u softveru.
       - [ ] Task 3: bare-metal aplikacija u Vitisu
 - [ ] Korak 10: TCL skripta za automatizaciju celog Vivado toka [10 bodova]
       (skeleton u `Vezbe/(C) Vezba 13 - Design Constraining i TCL Scripting.md`)
