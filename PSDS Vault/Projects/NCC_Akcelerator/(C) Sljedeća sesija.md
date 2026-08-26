@@ -1,5 +1,100 @@
 # Sljedeća sesija
 
+## PRVO za sljedeću sesiju — Korak 10 (posljednji)
+
+> **Stanje 2026-08-27. KORACI 1-9 ZAVRŠENI — 90 bodova.** Preostaje **Korak 10 (10)**.
+
+### Korak 9 je gotov i potvrđen na hardveru
+
+FEN sa ploče je znak po znak identičan zvaničnom:
+`rnbqkbnr/pp5p/4ppp1/2pp4/5P2/1P1BPN2/P1PPQ1PP/RNB1K2R`, **32/32 polja**, **1.782 ms**.
+
+| Faza | Šta dokazuje | Rezultat |
+|---|---|---|
+| 1 | AXI-Lite radi u oba smjera | `IMG_W` upisano 90, pročitano 90 |
+| 2 | S01 memorije | 8.100 riječi, **0 neslaganja** |
+| 3 | Jezgro računa | **`0x80000000` @ idx 956** — bit-identično Koraku 4 |
+| 4 | Prenosi | isto kao faza 3 |
+| 5 | Pun tok | FEN tačan, 1.782 ms |
+
+Izmjerena raspodjela: računanje **1.555 ms (87,3 %)**, upis u S01 120 ms, čitanje
+rezultata 67 ms, obrada na procesoru 40 ms. Naspram ESL reference (3,667 s)
+**2,06× brže** uz identičan rezultat.
+
+### ⚠️ Prenosi idu PROCESOROM, ne DMA-om
+
+`#define NCC_USE_CDMA 0` u `src/vitis/app/ncc_hw.c`. Razlog: **burstovi duži od dva
+beata zaglavljuju `axi_interconnect_0`** (STRATEGY=1, dijeljena magistrala). Izmjereno
+preko JTAG-a, bez našeg koda: 1 i 2 beata rade, 3 i 4 zaglavljuju — podjednako za
+DDR→DDR i S01→S01. CDMA, HP0, S01 i topologija block designa su time isključeni.
+Puni zapis u `BUGS.md`.
+
+Košta najviše ~9 % vremena. **DMA ostaje u block designu** (Korak 7 nepromijenjen),
+aplikacija ga ne koristi. Povratak je **jedna linija** kad interkonekt proradi.
+
+**Nedovršeno (dogovoreno kao sljedeće poboljšanje):** izmjestiti tri AXI-Lite slave-a
+(`ncc0.S00`, `ncc1.S00`, `axi_cdma_0.S_AXI_LITE`) na zaseban interkonekt i vidjeti hoće
+li burstovi proraditi. Hipoteza je da dijeljeni podatkovni put trpi zbog njih, ali
+**nije potvrđena**.
+
+### Dva bug-a u IP-u nađena i popravljena usput
+
+Oba AXI slave-a su visila kad `W` stigne prije `AW` (AXI to izričito dozvoljava):
+
+- **S00** (AXI-Lite) — commit `720d162`
+- **S01** (AXI-Full, burstovi) — commit `4bac595`, uz dodatnu zamku: adresni proces je
+  pre-inkrementirao na goli `WVALID`, pa je morao i on
+
+Oba su imala **polovičnu popravku iz Koraka 8** (`wr_beat`) koja je riješila samo
+posljedicu po podatke, ne i protokolarni zastoj. Preživjeli su Korake 6, 7 i 8.
+
+Novi testbenčevi `ncc_accel_wfirst_tb` i `ncc_accel_s01_burst_wfirst_tb` pokrivaju sve
+redoslijede i **dokazano padaju na starom RTL-u**. Popravke su smanjile površinu
+(6.274 → 6.225 LUT) i poboljšale tajming (+0,181 → **+0,268 ns**).
+
+Usput: **`ncc_accel_burst_tb` iz Koraka 7 je kodirao bug** — nikad nije čitao
+`s01_wready`, pa je prolazio samo zato što je `wready` bio trajno visok. Popravljen
+(`cb8b67a`) da poštuje handshake i da svaka petlja ima timeout.
+
+### Otvoreno — završiti prvo
+
+**Poglavlje 10.3 još nosi „−0,054 ns na 10 ns", mjereno PRIJE AXI popravki.** Kontrolno
+mjerenje sa popravljenim RTL-om je pokrenuto na kraju sesije (`run100.tcl`, odvojen
+projekat `C:/ncc100`, ispis u scratchpad `run100_out.txt`). Pošto su popravke na 11 ns
+donijele +0,087 ns, **moguće je da sistem sada zatvara 100 MHz** — što bi promijenilo
+zaključak dokumenta.
+
+**PDF nije regenerisan** poslije te izmjene i čeka taj rezultat. Sve ostalo u HTML-u je
+ažurno (Tabele 19-21, 25, 26, zaključak).
+
+### Korak 10 — šta treba
+
+`package_ip.tcl` i ulančavanje cijelog toka do XSA. Skripte uglavnom postoje:
+`create_bd.tcl` (sad sa parametrima `NCC_FCLK` i `NCC_PROJ_DIR`), `run_impl.tcl`
+(sinteza → implementacija → **bitstream → XSA**, sa četiri kapije), `run_synth_core.tcl`,
+`fix_ip_package.tcl`, `build_app.tcl`, `run_app.tcl`, `uart_log.ps1`.
+
+⚠️ `package_ip.tcl` **mora** na kraju pozvati `fix_ip_package.tcl` — wizard vraća
+`vhdlSource` i `ADDR_WIDTH=10`, a sa pogrešnim tipom fajla IP se sintetiše kao **prazna
+kutija bez ijedne greške**. `.zip` arhiva IP-a je zastarjela i regeneriše se tu.
+
+### Korisno za sljedeći put
+
+- **UART bez ijednog dodatnog programa:** ploča je **COM6** (FTDI: kanal A `...A6A`
+  JTAG, kanal B `...A6B` UART). `src/vitis/scripts/uart_log.ps1` snima ispis preko
+  .NET `SerialPort`. Baud **115200** izveden iz `ps7_init.tcl`, nije pretpostavljen.
+- **Oporavak zaglavljene ploče:** `rst -srst` na `xc7z010`, pa `fpga -file`, pa `stop`.
+  Poslije više zaglavljivanja DAP ode u trajnu grešku i treba **fizički restart**.
+- **Vitis radni prostor** ume da se pokvari; `build_app.tcl` sad radi `app remove`
+  prije `app create` i ispisuje gdje je tražio `.elf`.
+- **Tcl za XSCT mora biti bez BOM-a** — PowerShell `Set-Content -Encoding utf8` ga
+  upisuje i XSCT pukne sa `invalid command name`.
+- `xsct.bat` je u `Vitisin`, ne u `Vivadoin`.
+
+---
+
+## Ranije zabilježeno
+
 ## PRVO za sledeću sesiju — Korak 9 (bitstream + Vitis)
 
 > **Stanje 2026-07-26 (kraj sesije). KORACI 1-8 ZAVRŠENI — 70 bodova.**
