@@ -193,6 +193,85 @@ uzroka uporediti putanje na ISTOM taktu.** Izmena je ipak zadržana — zbog pov
 
 ---
 
+## S00 (AXI-Lite) upis VISI kad W stigne pre AW  [NAĐENO NA PLOČI 2026-08-26]
+
+Prvi pokušaj pokretanja softvera na ploči (Korak 9, faza 1). Program ispiše banner i
+`ncc0 STATUS = 0x00000000 (done=0 busy=0)`, pa **stane**. Sledeći korak je upis u
+`IMG_W`. Procesor se zaglavi tako da ga ni debager ne može zaustaviti:
+
+```
+Cannot halt processor core, timeout
+```
+
+To je potpis mastera koji čeka `BVALID` koji nikad ne stiže.
+
+### Merenje sa kontrolom (JTAG, zaobilazi softver)
+
+| Operacija | Rezultat |
+|---|---|
+| `R` ncc0 `STATUS` `0x50000034` | radi |
+| `R` ncc0 `IMG_W` `0x50000000` | radi |
+| `R` CDMA `SR` `0x60000004` = `0x00000002` | radi |
+| **`W` CDMA `0x60000000`** | **prolazi** ← kontrola: Xilinx IP, isti GP0 i interconnect |
+| **`W` ncc0 `IMG_W` `0x50000000`** | **pada**: `APB AP transaction error, DAP 0xF0000021` |
+| `W` ncc0 **S01** `0x50020000` | prolazi ← podatkovni put je zdrav |
+
+Kontrolni upis u CDMA prolazi **istim putem** (GP0 → interconnect), pa magistrala,
+dekodiranje adresa i taktovi nisu krivi. Bug je u `ncc_accel`, i to **samo u S00**.
+
+### Uzrok
+
+`ncc_accel_slave_lite_v1_0_S00_AXI.vhd`: `axi_wready` se postavi na `'1'` u stanju
+`Idle` i **nikad se ne spušta** (osim reseta i `others`).
+
+AXI izričito dozvoljava da `WVALID` stigne **pre** `AWVALID`. Kad se to desi:
+
+1. handshake **prihvati** W beat (`wready='1'` i `wvalid='1'`),
+2. ali FSM je u stanju `Waddr` i taj beat nigde ne beleži,
+3. kad posle stigne `AW`, FSM ide u `Wdata` i čeka `W` koji se **već dogodio**,
+4. `BVALID` se nikad ne izda → master visi zauvek.
+
+### ⚠️ Ovo je bila POLOVIČNA popravka iz Koraka 8
+
+Komentar na linijama 137-141 istog fajla pokazuje da je **baš taj redosled** (W pre AW)
+nađen u code review-u Koraka 8. Popravka tada uvedena — signal `wr_beat` — rešila je
+**posledicu po podatke** (upis u registar dekodovan po staroj `axi_awaddr`), ali **ne i
+protokolarni zastoj**. Bug je preživeo jer je gledana samo jedna od dve posledice.
+
+**Pouka: kad se nađe da protokol dozvoljava redosled koji dizajn ne očekuje, proveriti
+SVE posledice tog redosleda — i podatke i rukovanje.**
+
+### Zašto simulacija nije uhvatila
+
+`ncc_accel_tb` drajvuje `AWVALID` i `WVALID` **u istom taktu**. Taj redosled radi i na
+starom RTL-u. Nijedan postojeći testbench ne drajvuje W pre AW.
+
+**Peti slučaj istog obrasca u ovom projektu** — „verifikovano samo simulacijom, puklo na
+hardveru". Prethodna četiri su S01 burst off-by-one, `vhdlSource` tip fajla,
+`C_S01_AXI_ADDR_WIDTH`, i pretpostavka da je PS preset neutralan za timing.
+
+### Oporavak zaglavljene ploče
+
+```tcl
+targets -set -filter {name =~ "xc7z010"}
+rst -srst
+fpga -file <bitstream>
+targets -set -filter {name =~ "*Cortex-A9 MPCore #0*"}
+stop
+```
+
+`rst -por` nije podržan na ovoj meti, a `rst -system` nije važeći tip.
+
+### Kako se čita UART bez ijednog dodatnog programa
+
+Ploča se javlja kao **COM6** (FTDI dvokanalni: kanal A `...A6A` je JTAG, kanal B
+`...A6B` je UART). PowerShell čita port preko `System.IO.Ports.SerialPort` — skripta je
+`src/vitis/scripts/uart_log.ps1`. Baud **115200** je izveden iz `ps7_init.tcl`
+(`CD = 0x7C = 124`, `BDIV = 6`, `UART_CLK = 100 MHz` → `100e6/(124·7) = 115207`), nije
+pretpostavljen.
+
+---
+
 ## PS preset NIJE neutralan za timing — i putanja se premešta  [ISPRAVKA, 2026-08-26]
 
 Kad je `board_part` prebačen sa `zybo-z7-10:part0:1.2` na stvarnu ploču
