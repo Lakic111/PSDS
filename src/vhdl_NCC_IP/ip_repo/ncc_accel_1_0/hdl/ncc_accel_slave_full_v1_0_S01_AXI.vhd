@@ -212,23 +212,15 @@ architecture arch_imp of ncc_accel_slave_full_v1_0_S01_AXI is
 
 	--ADDR_LSB = 4 for 128 bits (n downto 4)
 
+	-- ADDR_LSB koriste adresni brojaci (awaddr/araddr inkrement po reci).
 	constant ADDR_LSB  : integer := (C_S_AXI_DATA_WIDTH/32)+ 1;
-	constant OPT_MEM_ADDR_BITS : integer := 7;
-	constant USER_NUM_MEM: integer := 1;
+	-- low koriste aw_wrap_en / ar_wrap_en.
 	constant low : std_logic_vector (C_S_AXI_ADDR_WIDTH - 1 downto 0) := (others => '0');
 
-	------------------------------------------------
-	---- Signals for user logic memory space example
-	--------------------------------------------------
-	signal mem_address_read : std_logic_vector(OPT_MEM_ADDR_BITS downto 0);
-	signal mem_address_write : std_logic_vector(OPT_MEM_ADDR_BITS downto 0);
-	type word_array is array (0 to USER_NUM_MEM-1) of std_logic_vector(C_S_AXI_DATA_WIDTH-1 downto 0);
-	signal mem_data_out : word_array;
+	-- Napomena (Korak 7): generisani "user logic memory space example" (4x 256 B
+	-- byte_ram + mem_data_out) je obrisan -- NCC koristi mem_subsystem preko
+	-- mem_addr_o/mem_wdata_o/mem_we_o/mem_rdata_i, a primer je bio mrtav kod.
 
-	signal i : integer;
-	signal j : integer;
-	signal mem_byte_index : integer;
-	type BYTE_RAM_TYPE is array (0 to 255) of std_logic_vector(7 downto 0);
 	 --State machine local parameters
 	constant Idle : std_logic_vector(1 downto 0) := "00";
 	constant Raddr: std_logic_vector(1 downto 0) := "10";
@@ -240,7 +232,25 @@ architecture arch_imp of ncc_accel_slave_full_v1_0_S01_AXI is
 	signal state_read : std_logic_vector(1 downto 0);
 	signal state_write: std_logic_vector(1 downto 0);
 
+	-- look-ahead adresa citanja: registrovano dp_bram citanje trazi adresu
+	-- jedan takt pre nego sto beat izadje na rdata
+	signal araddr_next : std_logic_vector(16 downto 0);
+	-- Prihvacen upisni beat (W uz vec prihvacen AW) -- videti komentar uz mem_we_o.
+	signal wr_beat     : std_logic;
+
 begin
+	-- Staticka zastita (Korak 7): mem_addr_o je fiksno 17-bitni port ka
+	-- mem_subsystem-u (regioni slika/sablon/rezultat na 0x00000/0x08000/0x10000),
+	-- pa je 17 jedina ispravna sirina adrese. Package IP wizard pakuje 10 (jer mu
+	-- "Memory Size" staje na 1024 B) -- bez ove provere S01 tiho dekodira samo 1 KB
+	-- i sva tri regiona se preslikaju jedan na drugi.
+	-- Ako ovo pukne: pokreni src/vhdl/script/fix_ip_package.tcl
+	assert C_S_AXI_ADDR_WIDTH = 17
+		report "C_S_AXI_ADDR_WIDTH mora biti 17 (128 KB), dobijeno " &
+		       integer'image(C_S_AXI_ADDR_WIDTH) &
+		       " -- pokreni src/vhdl/script/fix_ip_package.tcl"
+		severity failure;
+
 	-- I/O Connections assignments
 
 	S_AXI_AWREADY	<= axi_awready;
@@ -467,49 +477,51 @@ begin
 	       end if;                                   
 	     end if;                                   
 	 end process;                                   
-	---- ------------------------------------------
-	---- -- Example code to access user logic memory region
-	---- ------------------------------------------
-	 gen_mem_sel: if (USER_NUM_MEM >= 1) generate                                 
-	   begin                                 
-	     mem_address_read <= axi_araddr(ADDR_LSB+OPT_MEM_ADDR_BITS downto ADDR_LSB);                                 
-	      mem_address_write <= S_AXI_AWADDR(ADDR_LSB+OPT_MEM_ADDR_BITS downto ADDR_LSB) when (S_AXI_AWVALID = '1' and S_AXI_WVALID = '1') else                                 
-	                       axi_awaddr(ADDR_LSB+OPT_MEM_ADDR_BITS downto ADDR_LSB);                                 
-	 end generate gen_mem_sel;                                  
-	 -- implement Block RAM(s)                                 
-	 BRAM_GEN : for i in 0 to USER_NUM_MEM-1 generate                                 
-	    signal mem_wren : std_logic;                                 
-	    begin                                 
-	      mem_wren <= axi_wready and S_AXI_WVALID ;                                 
-	      BYTE_BRAM_GEN : for mem_byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) generate                                 
-	      signal byte_ram : BYTE_RAM_TYPE;                                 
-	      signal data_in  : std_logic_vector(8-1 downto 0);                                 
-	      signal data_out : std_logic_vector(8-1 downto 0);                                 
-	      begin                                 
-	       --assigning 8 bit data                                 
-	        data_in  <= S_AXI_WDATA((mem_byte_index*8+7) downto mem_byte_index*8);                                 
-	        data_out <= byte_ram(to_integer(unsigned(mem_address_read)));                                 
-	        BYTE_RAM_PROC : process( S_AXI_ACLK ) is                                 
-	          begin                                 
-	           if ( rising_edge (S_AXI_ACLK) ) then                                 
-	             if ( mem_wren = '1' and S_AXI_WSTRB(mem_byte_index) = '1' ) then                                 
-	                byte_ram(to_integer(unsigned(mem_address_write))) <= data_in;                                 
-	             end if;                                 
-	          end if;                                   
-	        end process BYTE_RAM_PROC;                                 
-	       mem_data_out(i)((mem_byte_index*8+7) downto mem_byte_index*8) <= data_out;                                  
-	     end generate BYTE_BRAM_GEN;                                 
-	 end generate BRAM_GEN;
 
 	-- === NCC omotac: veza AXI-Full <-> mem_subsystem ===
-	-- Citanje: adresa na ciklusu prihvata (S_AXI_ARADDR) da 1-taktno registrovano
-	-- dp_bram citanje bude poravnato sa rvalid (single-beat pristupi).
-	mem_addr_o  <= S_AXI_ARADDR(16 downto 0) when (S_AXI_ARVALID = '1' and axi_arready = '1') else
-	               axi_araddr(16 downto 0)   when (state_read = Rdata) else
-	               S_AXI_AWADDR(16 downto 0) when (S_AXI_AWVALID = '1' and S_AXI_WVALID = '1') else
+	-- dp_bram citanje je registrovano (1 takt), pa adresa mora ici JEDAN TAKT
+	-- unaprijed. Prvi beat: adresa na ciklusu prihvata (S_AXI_ARADDR). Beat k>0:
+	-- u taktu kad se beat k trosi izdaje se adresa beat-a k+1 (araddr_next).
+	-- Pri zastoju (RREADY='0') adresa se drzi pa podatak beat-a k ostaje validan.
+	-- INCR uvecava; FIXED zadrzava adresu; WRAP nije podrzan (nije ni bio).
+	-- Look-ahead mora da prati ISTU aritmetiku kao brojac axi_araddr (linije nize),
+	-- inace se za te tipove bursta vraca ista off-by-one greska zbog koje je ovo i
+	-- pisano. Ranije je pokrivao samo INCR, a brojac napreduje i za WRAP i za
+	-- rezervisano "11" -- tiha korupcija sa OKAY odgovorom. (code review Koraka 8)
+	araddr_next <= axi_araddr(16 downto 0)
+	                 when axi_arburst = "00" else                    -- FIXED: adresa stoji
+	               std_logic_vector(resize(unsigned(axi_araddr(16 downto 0))
+	                                       - to_unsigned(ar_wrap_size, 17), 17))
+	                 when (axi_arburst = "10" and ar_wrap_en = '1') else  -- WRAP, na granici
+	               std_logic_vector(unsigned(axi_araddr(16 downto 0)) + 4);  -- INCR i WRAP bez omotanja
+
+	-- Upisni beat je validan SAMO uz prihvacen AW: ili u istom taktu (state Waddr +
+	-- AWVALID + awready), ili u Wdata gde je AW vec prihvacen ranije.
+	-- Bez ovoga (Korak 8, code review):
+	--   (a) axi_wready je '1' od Idle pa nadalje, pa W beat koji stigne PRE AW
+	--       (AXI to dozvoljava) biva prihvacen i upisan na STARU axi_awaddr;
+	--   (b) AWVALID sledece transakcije, dok tekuci burst jos tece kroz Wdata,
+	--       otimao je mem_addr_o na svoju adresu -> beat tekuceg bursta ide na
+	--       pogresnu rec. Citajuca grana je to od pocetka radila ispravno
+	--       (kvalifikovana sa axi_arready), upisna nije.
+	wr_beat <= '1' when (S_AXI_WVALID = '1' and axi_wready = '1' and
+	                     ((state_write = Waddr and S_AXI_AWVALID = '1' and axi_awready = '1')
+	                      or state_write = Wdata))
+	           else '0';
+
+	mem_addr_o  <= S_AXI_ARADDR(16 downto 0)
+	                 when (S_AXI_ARVALID = '1' and axi_arready = '1') else
+	               araddr_next
+	                 when (state_read = Rdata and axi_rvalid = '1' and S_AXI_RREADY = '1') else
+	               axi_araddr(16 downto 0)
+	                 when (state_read = Rdata) else
+	               S_AXI_AWADDR(16 downto 0)
+	                 when (state_write = Waddr and S_AXI_AWVALID = '1' and axi_awready = '1') else
 	               axi_awaddr(16 downto 0);
 	mem_wdata_o <= S_AXI_WDATA;
-	mem_we_o    <= axi_wready and S_AXI_WVALID;
+	-- WSTRB(0): mem_subsystem pamti samo donji bajt (1 piksel po 32-bitnoj reci),
+	-- pa upis kod koga je bajt-lane 0 iskljucen ne sme da promeni piksel.
+	mem_we_o    <= wr_beat and S_AXI_WSTRB(0);
                                  
 	-- Add user logic here
 

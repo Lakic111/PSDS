@@ -127,8 +127,8 @@ architecture rtl of ncc_core is
                       S_CALC_MEAN, S_CALC_MEAN_WAIT,
                       S_L_V,
                       S_L_U_A, S_L_U_B, S_L_U_C, S_L_U_D, S_L_U_E, S_L_U_WAIT,
-                      S_L_YX_FILL, S_L_YX_RUN, S_L_YX_DRAIN,
-                      S_NCC_DIV, S_NCC_WAIT,
+                      S_L_YX_FILL, S_L_YX_RUN, S_L_YX_DRAIN, S_L_YX_DRAIN2,
+                      S_NCC_SQ, S_NCC_DIV, S_NCC_WAIT,
                       S_WRITE_RESULT, S_DONE);
 
     signal state_reg, state_next : state_t := S_IDLE;
@@ -147,6 +147,17 @@ architecture rtl of ncc_core is
     signal sum_num_reg, sum_num_next             : numacc_t := (others => '0');
     signal sum_den_f_reg, sum_den_f_next         : denacc_t := (others => '0');
     signal sum_den_t_reg, sum_den_t_next         : denacc_t := (others => '0');
+    -- Stepen 2 protocne MAC petlje (Korak 8b): razlike piksel-sredina se registruju
+    -- pre mnozenja, da se putanja BRAM -> oduzimanje -> mnozenje -> akumulator
+    -- presece na dva takta. mac_v_reg kaze da li df_reg/dt_reg drze validan piksel.
+    signal df_reg, df_next                       : diff_t := (others => '0');
+    signal dt_reg, dt_next                       : diff_t := (others => '0');
+    signal mac_v_reg, mac_v_next                 : std_logic := '0';
+    -- Kvadriranje brojioca / proizvod imenilaca registrovani pre ulaza u delilac
+    -- (Korak 8b): putanja sum_num_reg -> kvadriranje -> work_reg delioca bila je
+    -- najgora post-route (10,68 ns). Izvrsava se jednom po prozoru.
+    signal num_sq_reg, num_sq_next               : sq52_t := (others => '0');
+    signal den_prod_reg, den_prod_next           : sq52_t := (others => '0');
     signal busy_reg, busy_next                   : std_logic := '0';
     signal done_reg, done_next                   : std_logic := '0';
     signal sum_f_partial_reg, sum_f_partial_next : sat_t := (others => '0');
@@ -198,6 +209,11 @@ begin
             sum_num_reg <= (others => '0');
             sum_den_f_reg <= (others => '0');
             sum_den_t_reg <= (others => '0');
+            df_reg <= (others => '0');
+            dt_reg <= (others => '0');
+            mac_v_reg <= '0';
+            num_sq_reg <= (others => '0');
+            den_prod_reg <= (others => '0');
             busy_reg <= '0';
             done_reg <= '0';
             sum_f_partial_reg <= (others => '0');
@@ -215,6 +231,11 @@ begin
             sum_num_reg <= sum_num_next;
             sum_den_f_reg <= sum_den_f_next;
             sum_den_t_reg <= sum_den_t_next;
+            df_reg <= df_next;
+            dt_reg <= dt_next;
+            mac_v_reg <= mac_v_next;
+            num_sq_reg <= num_sq_next;
+            den_prod_reg <= den_prod_next;
             busy_reg <= busy_next;
             done_reg <= done_next;
             sum_f_partial_reg <= sum_f_partial_next;
@@ -236,9 +257,6 @@ begin
     -- PROCES 2: kombinaciona logika
     comb_proc : process (all)
         variable count       : integer range 0 to MAX_TMP_PIX;
-        variable df, dt      : diff_t;
-        variable num_sq_v    : unsigned(51 downto 0);
-        variable den_prod_v  : unsigned(51 downto 0);
         variable new_row_sum : sat_t;
     begin
         state_next <= state_reg;
@@ -253,6 +271,11 @@ begin
         sum_num_next <= sum_num_reg;
         sum_den_f_next <= sum_den_f_reg;
         sum_den_t_next <= sum_den_t_reg;
+        df_next <= df_reg;
+        dt_next <= dt_reg;
+        mac_v_next <= mac_v_reg;
+        num_sq_next <= num_sq_reg;
+        den_prod_next <= den_prod_reg;
         busy_next <= busy_reg;
         done_next <= '0';
         sum_f_partial_next <= sum_f_partial_reg;
@@ -274,6 +297,29 @@ begin
 
             when S_IDLE =>
                 if start = '1' then
+                    -- UGOVOR SA SOFTVEROM (code review Koraka 8): dimenzije dolaze iz
+                    -- 8-bitnih AXI-Lite registara, dakle 0..255, a ovde se smestaju u
+                    -- `integer range 0 to MAX_IMG_W (=90)`. Van opsega je u simulaciji
+                    -- fatalna greska opsega, a u hardveru tiho odsecanje bita i indeksi
+                    -- van `sat_mem`. Dodatno: tmp_w*tmp_h mora stati u MAX_TMP_PIX,
+                    -- tmp<=img (inace res ide u minus), i tmp!=0 (inace deljenje nulom
+                    -- u seq_divider daje sve jedinice). Ove tvrdnje su simulaciona
+                    -- kapija -- u sintezi nestaju, softver mora da postuje ugovor.
+                    assert to_integer(img_w) >= 1 and to_integer(img_w) <= MAX_IMG_W
+                        and to_integer(img_h) >= 1 and to_integer(img_h) <= MAX_IMG_H
+                        report "ncc_core: img_w/img_h van opsega 1.." & integer'image(MAX_IMG_W)
+                        severity failure;
+                    assert to_integer(tmp_w) >= 1 and to_integer(tmp_w) <= MAX_TMP_W
+                        and to_integer(tmp_h) >= 1 and to_integer(tmp_h) <= MAX_TMP_H
+                        report "ncc_core: tmp_w/tmp_h van opsega 1.." & integer'image(MAX_TMP_W)
+                        severity failure;
+                    assert to_integer(tmp_w) * to_integer(tmp_h) <= MAX_TMP_PIX
+                        report "ncc_core: tmp_w*tmp_h > MAX_TMP_PIX" severity failure;
+                    assert to_integer(tmp_w) <= to_integer(img_w)
+                        and to_integer(tmp_h) <= to_integer(img_h)
+                        report "ncc_core: sablon veci od slike -> negativan res_w/res_h"
+                        severity failure;
+
                     img_w_next <= to_integer(img_w);
                     img_h_next <= to_integer(img_h);
                     tmp_w_next <= to_integer(tmp_w);
@@ -388,10 +434,19 @@ begin
                     state_next <= S_L_YX_FILL;
                 end if;
 
-            -- PIPELINED unutrasnja petlja (~1 takt/piksel)
+            -- PIPELINED unutrasnja petlja, TROSTEPENA (Korak 8b, 2026-07-25):
+            --   stepen 1: izdaj adresu piksela i
+            --   stepen 2: podatak piksela i stize -> registruj df/dt
+            --   stepen 3: mnozenje + akumulacija iz df_reg/dt_reg
+            -- Ranije su stepeni 2 i 3 bili u ISTOM taktu (BRAM -> oduzimanje ->
+            -- mnozenje -> 27-bitni akumulator). Post-route je ta putanja bila
+            -- 13,0 ns (16 nivoa, 9x CARRY4) i obarala 100 MHz: WNS -3,299 ns.
+            -- Cena razdvajanja: +1 takt po prozoru od ~485 = +0,2% latencije.
+            -- mac_v_reg gejtuje akumulaciju dok se protok ne napuni.
             when S_L_YX_FILL =>
                 img_addr_o   <= v_reg * img_w_reg + u_reg;   -- (x=0, y=0)
                 templ_addr_o <= 0;
+                mac_v_next   <= '0';        -- jos nema registrovanog piksela
                 if tmp_w_reg = 1 and tmp_h_reg = 1 then
                     state_next <= S_L_YX_DRAIN;
                 else
@@ -404,12 +459,17 @@ begin
                 end if;
 
             when S_L_YX_RUN =>
-                df := signed(resize(img_data_i, 9))   - signed(resize(f_bar_reg, 9));
-                dt := signed(resize(templ_data_i, 9)) - signed(resize(template_mean_reg, 9));
-                sum_num_next   <= sum_num_reg   + resize(df * dt, 27);
-                sum_den_f_next <= sum_den_f_reg + unsigned(resize(df * df, 26));
-                sum_den_t_next <= sum_den_t_reg + unsigned(resize(dt * dt, 26));
-
+                -- stepen 2: razlike za piksel ciji je podatak sad na ulazu
+                df_next    <= signed(resize(img_data_i, 9))   - signed(resize(f_bar_reg, 9));
+                dt_next    <= signed(resize(templ_data_i, 9)) - signed(resize(template_mean_reg, 9));
+                mac_v_next <= '1';
+                -- stepen 3: akumuliraj PRETHODNI piksel
+                if mac_v_reg = '1' then
+                    sum_num_next   <= sum_num_reg   + resize(df_reg * dt_reg, 27);
+                    sum_den_f_next <= sum_den_f_reg + unsigned(resize(df_reg * df_reg, 26));
+                    sum_den_t_next <= sum_den_t_reg + unsigned(resize(dt_reg * dt_reg, 26));
+                end if;
+                -- stepen 1: adresa sledeceg piksela
                 img_addr_o   <= (v_reg + y_reg) * img_w_reg + (u_reg + x_reg);
                 templ_addr_o <= y_reg * tmp_w_reg + x_reg;
 
@@ -421,27 +481,48 @@ begin
                     x_next <= 0; y_next <= y_reg + 1;
                 end if;
 
+            -- DRAIN: podatak POSLEDNJEG piksela je na ulazu -> registruj ga,
+            -- a akumuliraj pretposlednji.
             when S_L_YX_DRAIN =>
-                df := signed(resize(img_data_i, 9))   - signed(resize(f_bar_reg, 9));
-                dt := signed(resize(templ_data_i, 9)) - signed(resize(template_mean_reg, 9));
-                sum_num_next   <= sum_num_reg   + resize(df * dt, 27);
-                sum_den_f_next <= sum_den_f_reg + unsigned(resize(df * df, 26));
-                sum_den_t_next <= sum_den_t_reg + unsigned(resize(dt * dt, 26));
-                state_next <= S_NCC_DIV;
+                df_next    <= signed(resize(img_data_i, 9))   - signed(resize(f_bar_reg, 9));
+                dt_next    <= signed(resize(templ_data_i, 9)) - signed(resize(template_mean_reg, 9));
+                mac_v_next <= '1';
+                if mac_v_reg = '1' then
+                    sum_num_next   <= sum_num_reg   + resize(df_reg * dt_reg, 27);
+                    sum_den_f_next <= sum_den_f_reg + unsigned(resize(df_reg * df_reg, 26));
+                    sum_den_t_next <= sum_den_t_reg + unsigned(resize(dt_reg * dt_reg, 26));
+                end if;
+                state_next <= S_L_YX_DRAIN2;
+
+            -- DRAIN2: akumuliraj poslednji registrovani piksel.
+            when S_L_YX_DRAIN2 =>
+                sum_num_next   <= sum_num_reg   + resize(df_reg * dt_reg, 27);
+                sum_den_f_next <= sum_den_f_reg + unsigned(resize(df_reg * df_reg, 26));
+                sum_den_t_next <= sum_den_t_reg + unsigned(resize(dt_reg * dt_reg, 26));
+                mac_v_next     <= '0';
+                state_next     <= S_NCC_SQ;
 
             -- NCC^2 = (num_sq << 31) / den_prod  -> div_ncc
-            when S_NCC_DIV =>
+            -- Razdvojeno u DVA takta (Korak 8b): kvadriranje/mnozenje se registruje,
+            -- pa tek onda ulazi u 83-bitni delilac. Putanja sum_num_reg ->
+            -- kvadriranje -> div_ncc/work_reg bila je najgora post-route
+            -- (10,682 ns, WNS -0,869). Poluga je predvidjena u IDEJE.md: izvrsava
+            -- se jednom po prozoru (~485 taktova), pa propusnost prakticno ne pati.
+            when S_NCC_SQ =>
                 if sum_den_f_reg = 0 or sum_den_t_reg = 0 then
                     result_q_next <= (others => '0');
                     state_next <= S_WRITE_RESULT;
                 else
-                    num_sq_v   := unsigned(resize(sum_num_reg * sum_num_reg, 52));
-                    den_prod_v := resize(sum_den_f_reg * sum_den_t_reg, 52);
-                    dn_dividend <= shift_left(resize(num_sq_v, DN_W), 31);
-                    dn_divisor  <= resize(den_prod_v, DN_W);
-                    dn_start    <= '1';
-                    state_next  <= S_NCC_WAIT;
+                    num_sq_next   <= unsigned(resize(sum_num_reg * sum_num_reg, 52));
+                    den_prod_next <= resize(sum_den_f_reg * sum_den_t_reg, 52);
+                    state_next    <= S_NCC_DIV;
                 end if;
+
+            when S_NCC_DIV =>
+                dn_dividend <= shift_left(resize(num_sq_reg, DN_W), 31);
+                dn_divisor  <= resize(den_prod_reg, DN_W);
+                dn_start    <= '1';
+                state_next  <= S_NCC_WAIT;
 
             when S_NCC_WAIT =>
                 if dn_done = '1' then

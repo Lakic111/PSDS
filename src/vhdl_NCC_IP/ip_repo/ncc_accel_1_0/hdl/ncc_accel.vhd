@@ -193,6 +193,17 @@ begin
 		);
 
 	-- Memorijski podsistem (interne memorije slika/sablon/rezultat)
+	--
+	-- OGRANICENJE (code review Koraka 8): ceo IP radi na JEDNOM taktu -- ovde je to
+	-- s00_axi_aclk. Port A `mem_subsystem`-a hrani s01_inst (koji je nominalno na
+	-- s01_axi_aclk), pa `s00_axi_aclk` i `s01_axi_aclk` MORAJU biti isti signal.
+	-- IP-XACT ih deklarise kao dva interfejsa, sto formalno dopusta razlicite
+	-- taktove -- u tom slucaju bi svaki S01 pristup presao neusinhronizovanu granicu
+	-- domena (pogresne reci pri citanju, pogresne adrese pri upisu, bez ikakve greske).
+	-- create_bd.tcl oba veze na FCLK_CLK0; isto vazi i za reset (rst_s = not
+	-- s00_axi_aresetn, s01_axi_aresetn se ne koristi).
+	-- Ako ikada zatreba pravi dvo-taktni rad: dp_bram vec ima odvojene clka/clkb,
+	-- pa bi mem_subsystem trebalo prosiriti na dva takta umesto jednog.
 	ms_inst : entity work.mem_subsystem
 		port map (
 			clk => s00_axi_aclk,

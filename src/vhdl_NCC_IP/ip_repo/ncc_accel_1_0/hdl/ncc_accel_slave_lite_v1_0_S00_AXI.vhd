@@ -134,6 +134,12 @@ architecture arch_imp of ncc_accel_slave_lite_v1_0_S00_AXI is
 	signal byte_index	: integer;
 
 	 signal mem_logic  : std_logic_vector(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
+	 -- Prihvacen upisni beat: W uz VEC prihvacen AW. Generisani kontroler drzi
+	 -- axi_wready na '1' od Idle nadalje, a upisni proces je okidao na golo
+	 -- S_AXI_WVALID -- pa je W koji stigne pre AW (AXI to dozvoljava) upisivao
+	 -- registar dekodovan po STAROJ axi_awaddr, i to iznova svaki takt dok WVALID
+	 -- stoji. Nadjeno u code review-u Koraka 8.
+	 signal wr_beat    : std_logic;
 
 	 --State machine local parameters
 	constant Idle : std_logic_vector(1 downto 0) := "00";
@@ -154,7 +160,14 @@ begin
 	S_AXI_ARREADY	<= axi_arready;
 	S_AXI_RRESP	<= axi_rresp;
 	S_AXI_RVALID	<= axi_rvalid;
-	    mem_logic     <= S_AXI_AWADDR(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB) when (S_AXI_AWVALID = '1') else axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
+	    wr_beat <= '1' when (S_AXI_WVALID = '1' and axi_wready = '1' and
+	                         ((state_write = Waddr and S_AXI_AWVALID = '1' and axi_awready = '1')
+	                          or state_write = Wdata))
+	               else '0';
+	    -- AWADDR se uzima samo u taktu prihvatanja AW; inace vazi zapamcena axi_awaddr.
+	    mem_logic     <= S_AXI_AWADDR(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB)
+	                       when (state_write = Waddr and S_AXI_AWVALID = '1' and axi_awready = '1')
+	                     else axi_awaddr(ADDR_LSB + OPT_MEM_ADDR_BITS downto ADDR_LSB);
 
 	-- === NCC omotac: kontrola ka ncc_core ===
 	img_w <= slv_reg0(7 downto 0);
@@ -168,7 +181,7 @@ begin
 	    start_pulse <= '0';
 	    if S_AXI_ARESETN = '0' then
 	      done_sticky <= '0';
-	    elsif S_AXI_WVALID = '1' and axi_wready = '1' and mem_logic = "1100" and S_AXI_WDATA(0) = '1' then
+	    elsif wr_beat = '1' and mem_logic = "1100" and S_AXI_WDATA(0) = '1' then
 	      start_pulse <= '1';
 	      done_sticky <= '0';
 	    elsif core_done = '1' then
@@ -201,7 +214,7 @@ begin
 	             when Waddr =>		--At this state, slave is ready to receive address along with corresponding control signals and first data packet. Response valid is also handled at this state                                       
 	               if (S_AXI_AWVALID = '1' and axi_awready = '1') then                                       
 	                 axi_awaddr <= S_AXI_AWADDR;                                       
-	                 if (S_AXI_WVALID = '1') then                                       
+	                 if (S_AXI_WVALID = '1') then
 	                   axi_awready <= '1';                                       
 	                   state_write <= Waddr;                                       
 	                   axi_bvalid <= '1';                                       
@@ -219,7 +232,7 @@ begin
 	                 end if;                                       
 	               end if;                                       
 	             when Wdata =>		--At this state, slave is ready to receive the data packets until the number of transfers is equal to burst length                                       
-	               if (S_AXI_WVALID = '1') then                                       
+	               if (S_AXI_WVALID = '1') then
 	                 state_write <= Waddr;                                       
 	                 axi_bvalid <= '1';                                       
 	                 axi_awready <= '1';                                       
@@ -267,7 +280,7 @@ begin
 	      slv_reg14 <= (others => '0');
 	      slv_reg15 <= (others => '0');
 	    else
-	      if (S_AXI_WVALID = '1') then
+	      if (wr_beat = '1') then
 	          case (mem_logic) is
 	          when b"0000" =>
 	            for byte_index in 0 to (C_S_AXI_DATA_WIDTH/8-1) loop

@@ -23,9 +23,9 @@ vivado_pid*
 # Zip arhive izvora (drzimo raspakovano)
 src/vhdl.zip
 
-# Korak 6: xsim build dir + Vivado IP projekat cruft (drzimo samo spakovan IP
-# u src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0/, plus rucne izvore u src/vhdl/ip/)
-src/vhdl/work_ip/
+# xsim build dirovi (drzimo samo spakovan IP u src/vhdl_NCC_IP/ip_repo/ncc_accel_1_0/;
+# src/vhdl/ip/ je uklonjen u Koraku 7 -- ip_repo je jedini merodavan izvor)
+src/vhdl/work_*/
 src/vhdl_NCC_IP/ncc_ip/
 src/vhdl_NCC_IP/ip_repo/edit_ncc_accel_v1_0.*
 
@@ -40,3 +40,8 @@ desktop.ini
 # Obsidian per-user UI stanje
 PSDS Vault/.obsidian/workspace.json
 PSDS Vault/.obsidian/workspace-mobile.json
+
+# Vivado batch artefakti u korenu repoa
+clockInfo.txt
+dfx_runtime.txt
+src/vhdl_NCC_IP.zip
