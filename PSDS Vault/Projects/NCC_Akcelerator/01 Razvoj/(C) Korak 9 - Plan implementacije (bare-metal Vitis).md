@@ -35,6 +35,11 @@ potvrđene da postoje), `arm-none-eabi-gcc` iz `Vitis/gnu/aarch32/nt/`, standalo
   **Jedan piksel po 32-bitnoj reči.**
 - CDMA: `C_INCLUDE_SG=0` (simple mode), **`C_INCLUDE_DRE=0` → poravnanje na 4 bajta
   obavezno**, `C_M_AXI_DATA_WIDTH=32`.
+- **Dimenzije šablona (izmereno iz podataka, Task 1):** najviše 30×30, i **nisu svi
+  iste veličine** — `W = 30,30,24,30,30,30,30,30,22,24,28,25`,
+  `H = 30,30,22,30,30,30,30,30,22,23,23,15`. Zato je rezultata **3721** po finom
+  pozivu (61×61) i **961** po grubom (31×31). Kod nigde ne sme zakucati te brojeve —
+  računa ih kao `(img_w − tmp_w + 1) × (img_h − tmp_h + 1)`.
 - **Invarijant 1:** skorovi se porede kao `u32`, nikad `int32`.
 - **Invarijant 2:** nikad CDMA i procesor nad istim S01 istovremeno.
 - Svi generisani fajlovi u vaultu nose prefiks `(C)`; kod ide u `src/`, ne u vault.
@@ -845,12 +850,18 @@ int ncc_wait_done(const ncc_dev_t *d, u32 timeout_us) {
 }
 
 /* INVARIJANT 1: poredjenje kao u32 (videti ncc_logic.c). */
+/* INVARIJANT 1: poredjenje kao u32 (videti ncc_logic.c).
+   Rezultata je do 3721 po pozivu, pa se u Tasku 6 citanje prebacuje na DMA;
+   potpis se NE menja. Ovde je jos direktno citanje -- dovoljno za fazu 3. */
 u32 ncc_best_score(const ncc_dev_t *d, u32 n_results, u32 *idx_out) {
     u32 i, v, mx = 0u, mi = 0u;
     for (i = 0; i < n_results; i++) {
         v = Xil_In32(d->mem_base + MEM_RES_OFF + 4u*i);
         if (v > mx) { mx = v; mi = i; }
     }
+    if (idx_out) *idx_out = mi;
+    return mx;
+}
     if (idx_out) *idx_out = mi;
     return mx;
 }
@@ -1010,6 +1021,59 @@ static int load_region(const ncc_dev_t *d, u32 off, const u8 *px, u32 count, u32
     return (XAxiCdma_GetError(&cdma) != 0x0) ? -6 : 0;
 }
 ```
+
+- [ ] **Korak 1b: Prebaci i čitanje rezultata na DMA**
+
+Rezultata je do **3721** po finom pozivu. Procesorsko čitanje bi bilo ~13.208 reči po
+polju (~9,9 ms), odnosno **~317 ms na 32 polja = ~19 % ukupnog vremena**. Zato i rezultati
+idu preko CDMA — kako poglavlje 9.3 stavka 7 već nalaže.
+
+Dodaj u `ncc_hw.c` (staging bafer se ponovo koristi, smer je obrnut):
+
+```c
+/* CDMA: S01 -> DDR. Posle prenosa kes MORA biti ponisten nad baferom,
+   inace procesor cita staru sadrzinu. */
+static int fetch_results(const ncc_dev_t *d, u32 count) {
+    int tries;
+    if (count > NCC_IMG_MAX_WORDS) return -1;
+    if (!cdma_ready) return -2;
+
+    tries = 100000;
+    while (XAxiCdma_IsBusy(&cdma)) { if (--tries <= 0) return -3; }
+
+    if (XAxiCdma_SimpleTransfer(&cdma, (UINTPTR)(d->mem_base + MEM_RES_OFF),
+                                (UINTPTR)staging, count * 4u, NULL, NULL) != XST_SUCCESS)
+        return -4;
+
+    tries = 100000;
+    while (XAxiCdma_IsBusy(&cdma)) { if (--tries <= 0) return -5; }
+    if (XAxiCdma_GetError(&cdma) != 0x0) return -6;
+
+    Xil_DCacheInvalidateRange((UINTPTR)staging, count * 4u);
+    return 0;
+}
+```
+
+Zameni telo `ncc_best_score` tako da koristi taj bafer i **već testiranu**
+`logic_max_u32` umesto sopstvene petlje:
+
+```c
+u32 ncc_best_score(const ncc_dev_t *d, u32 n_results, u32 *idx_out) {
+    u32 i, mx = 0u, mi = 0u;
+    if (fetch_results(d, n_results)) return 0u;      /* greska -> skor 0, ne lazni pik */
+    for (i = 0; i < n_results; i++)
+        if (staging[i] > mx) { mx = staging[i]; mi = i; }
+    if (idx_out) *idx_out = mi;
+    return mx;
+}
+```
+
+Dodaj `#include "ncc_logic.h"` ako koristiš `logic_max_u32` za samu vrednost; indeks
+ionako traži sopstvenu petlju, pa je gornja varijanta dovoljna.
+
+⚠️ **Bez `Xil_DCacheInvalidateRange` ovo tiho vraća prethodni sadržaj bafera** — faza 4
+bi prošla (isti podaci kao faza 3), a faza 5 davala besmislice. Ne izostavljaj ga.
+
 
 - [ ] **Korak 2: Vrati `main.c` na fazu 3, samo promeni natpis**
 
@@ -1264,11 +1328,14 @@ git commit -m "Korak 9 Task 3.7: logika po polju, petlja 8x8, FEN -- FAZA 5"
 - Modify: `PSDS Vault/Projects/NCC_Akcelerator/02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.html`
 - Modify: `PSDS Vault/Projects/NCC_Akcelerator/CLAUDE.md`, `(C) Sljedeća sesija.md`
 
-- [ ] **Korak 1: Ispravi stavku 7 u poglavlju 9.3**
+- [ ] **Korak 1: Potvrdi da poglavlje 9.3 NE treba menjati**
 
-Zameni tekst stavke tako da glasi: procesor čita mapu rezultata (61 odnosno 31 reč,
-oko 12 µs), a DMA se koristi samo za sliku i šablon; time se izbegava poništavanje keša
-nad opsegom rezultata. **Slika 4 se NE menja** — ona je topološka.
+Ranija verzija plana je ovde tražila ispravku stavke 7 (rezultate čita procesor).
+**Povučeno** — rezultata je 3721, ne 61, pa je DMA ispravan izbor i stavka 7 je već
+tačna. Samo potvrdi da implementacija zaista koristi DMA za rezultate
+(`fetch_results` u `ncc_hw.c`) i pređi dalje. Nijedno poglavlje i nijedna slika se ne
+menjaju zbog ove odluke.
+
 
 - [ ] **Korak 2: Reši nesklad oko 146 KB u poglavlju 9.5**
 

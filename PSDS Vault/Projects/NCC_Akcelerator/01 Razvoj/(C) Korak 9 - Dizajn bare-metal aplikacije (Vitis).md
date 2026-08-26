@@ -42,8 +42,19 @@ upiši `CTRL=1`, pa prozivaj `STATUS` dok bit0 ne postane 1.
 | Region   | Offset od `mem_base` | Kapacitet         | Naše korišćenje               |
 | -------- | -------------------- | ----------------- | ----------------------------- |
 | slika    | `+0x00000`           | 32 KB = 8192 reči | 90×90 = **8100** reči (taman) |
-| šablon   | `+0x08000`           | 32 KB = 8192 reči | 90×30 = 2700 reči             |
-| rezultat | `+0x10000`           | 64 KB             | 61 (fino) / 31 (grubo)        |
+| šablon   | `+0x08000`           | 32 KB = 8192 reči | najviše 30×30 = **900** reči  |
+| rezultat | `+0x10000`           | 64 KB = 16384 reči| **3721** (fino) / **961** (grubo) |
+
+⚠️ **Ispravka 2026-08-26.** Ranija verzija ovog odeljka tvrdila je šablon 90×30 = 2700
+reči i 61 rezultat. **Netačno** — izmereno iz samih podataka (Task 1):
+
+```
+TMPL_FULL_W = 30,30,24,30,30,30,30,30,22,24,28,25
+TMPL_FULL_H = 30,30,22,30,30,30,30,30,22,23,23,15
+```
+
+Šabloni su najviše 30×30 i **nisu svi iste veličine**. Otud 61×61 = 3721 rezultata po
+finom pozivu, a ne 61. Sve izvedeno iz toga je preračunato.
 
 **Jedan piksel po 32-bitnoj reči.** U DDR-u su bajtovi → softver mora širiti 8→32 bita
 pre prenosa. CDMA kopira bez konverzije formata.
@@ -153,22 +164,33 @@ Prenos po jednom zauzetom polju, izvedeno iz gornjeg toka:
 | Stavka | Računica | Bajtova |
 |---|---|---|
 | grubi segment ×2 bloka | 2 × 2025 reči × 4 | 16.200 |
-| grubi šabloni ×6 | 6 × 675 × 4 | 16.200 |
+| grubi šabloni ×6 | 6 × 225 × 4 | 5.400 |
 | pun segment ×2 bloka | 2 × 8100 × 4 | 64.800 |
-| fini šabloni ×2 | 2 × 2700 × 4 | 21.600 |
-| **ukupno** | | **118.800 B = 116 KiB** |
+| fini šabloni ×2 | 2 × 900 × 4 | 7.200 |
+| **ukupno** | | **93.600 B = 91 KiB** |
 
-⚠️ **Poglavlje 9.5 tvrdi „oko 146 KB" i ne pokazuje izvođenje.** Ta brojka se ne poklapa
-sa ovim rasporedom prenosa i nisam je uspeo rekonstruisati nijednim (rezultati su svega
-1.232 B i ne objašnjavaju razliku). Ne usklađujem svoju računicu sa njom. Task 3 ionako
+⚠️ **Poglavlje 9.5 tvrdi „oko 146 KB" i ne pokazuje izvođenje.** Ni sa ispravljenim
+dimenzijama se ne poklapa (91 KiB). Ne usklađujem svoju računicu sa njom. Task 3
 **meri** stvarni prenos, pa se posle merenja 9.5 ili ispravlja ili dobija izvođenje.
+
 
 Paralelizam je **po šablonu**, ne po polju — dva bloka obrađuju dva različita šablona nad
 istim segmentom. To je odluka preuzeta iz ESL modela (`run_pairs`).
 
-Procenjeno PL vreme po polju: grubi 3 × ~29.800 + fini 1 × ~193.100 ≈ 283.000 taktova
-≈ **3,1 ms** pri 90,909 MHz; za ~32 zauzeta polja ≈ **100 ms** računanja. Prenosi će
-verovatno dominirati.
+PL vreme po polju, sa stvarnim dimenzijama i našim modelom latencije:
+
+| Stepen | Poziv | Taktova | Vreme |
+|---|---|---|---|
+| grubi | 45×45 / 15×15, ×3 para | 3 × 328.357 | 10,8 ms |
+| fini | 90×90 / 30×30, ×1 par | 3.783.652 | 41,6 ms |
+| **po polju** | | | **52,5 ms** |
+| **32 polja** | | | **≈ 1,68 s** |
+
+Fina brojka 3.783.652 takta = 41,6 ms **poklapa se sa Tabelom 22 u PDF-u**, a 1,68 s sa
+ranijom procenom „~1,7 s". **Računanje dominira, ne prenosi** — suprotno od onoga što je
+ranija verzija ovog odeljka tvrdila.
+
+
 
 ## 5. Podaci
 
@@ -203,15 +225,18 @@ mora dati bit-identičan rezultat — time je CDMA izolovan na jednu promenu.
 umesto modela, i poglavlju 10.6 pošteno poređenje sa ESL referencom (`board2.txt`,
 2 NCC + optimizacije = 3,667 s).
 
-## 8. Odstupanje od zatečene dokumentacije
+## 8. Odstupanje od zatečene dokumentacije — POVUČENO
 
-Poglavlje 9.3, **stavka 7** kaže da i mapu rezultata prenosi DMA. Rezultata je 61 (fino)
-odnosno 31 (grubo) → procesorsko čitanje traje ~12 µs i **izbegava celu klasu grešaka sa
-poništavanjem keša**. Implementacija koristi DMA samo za sliku i šablon.
+Ranija verzija ovog odeljka predlagala je da **procesor** čita mapu rezultata, uz
+obrazloženje „rezultata je 61, čitanje traje ~12 µs". **Taj broj je bio pogrešan** —
+rezultata je 3.721 po finom pozivu. Procesorsko čitanje bi bilo 13.208 reči po polju,
+oko 9,9 ms, odnosno **~317 ms na 32 polja = ~19 % ukupnog vremena.** Argument pada.
 
-Stavka 7 se ispravlja u jednu rečenicu. **Slika 4 se NE menja** — ona je topološka
-(ko je sa kim povezan), a povezanost CDMA → S01 i CDMA → DDR ostaje tačna; samo je jedan
-prenos ne koristi. Nijedna druga slika ne prikazuje tok podataka.
+**Rezultate čita DMA**, tačno kako poglavlje 9.3 stavka 7 već kaže. Time
+**dokumentacija ostaje nepromenjena** — nijedno poglavlje i nijedna slika se ne diraju.
+
+Cena je jedan `Xil_DCacheInvalidateRange` nad opsegom rezultata posle svakog prenosa.
+
 
 ## 9. Rizici
 
