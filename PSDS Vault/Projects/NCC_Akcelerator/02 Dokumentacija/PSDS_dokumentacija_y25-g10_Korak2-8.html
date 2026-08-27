@@ -2144,14 +2144,34 @@ vrednost iznosi 1000/11&nbsp;=&nbsp;90,909&nbsp;MHz. Odstupanje od nominalnih
 100&nbsp;MHz je <b>9,1&nbsp;%</b>, dakle unutar granice od 20&nbsp;% koju zadatak
 dopušta za razliku između sistemskog modela i realizacije.</p>
 
-<p class="noind"><b>Koliko fali do 100&nbsp;MHz.</b> Kontrolno merenje istog dizajna sa
-ograničenjem od 10&nbsp;ns daje rezervu od <b>&minus;0,054&nbsp;ns</b>, uz svega
-<b>6 od 15.481</b> krajnjih tačaka koje krše ograničenje (ukupno prekoračenje
-&minus;0,209&nbsp;ns). Ostvariva frekvencija integrisanog sistema je dakle
-<b>oko 99,5&nbsp;MHz</b>: sistemu za pun takt nedostaje pedeset pikosekundi.
-Radna tačka je ipak postavljena na 90,909&nbsp;MHz jer je to najbliža vrednost koju PLL
-procesorskog sistema može da isporuči ispod granice zatvaranja &mdash; deli ulaznu
-frekvenciju celim brojem, pa između 90,909 i 100&nbsp;MHz nema ostvarive vrednosti.</p>
+<p class="noind"><b>Sistem zatvara i 100&nbsp;MHz.</b> Kontrolno merenje istog dizajna sa
+ograničenjem od 10&nbsp;ns daje rezervu od <b>+0,032&nbsp;ns</b>, uz <b>0 od 15.494</b>
+krajnjih tačaka koje krše ograničenje. Takt <span class="mono">clk_fpga_0</span> je tada
+tačno 10,000&nbsp;ns, dakle <b>punih 100&nbsp;MHz</b> &mdash; PLL procesorskog sistema tu
+vrednost isporučuje bez deljenja na 1000/11.</p>
+
+<table>
+  <caption><b>Tabela 27.</b> Sistem na dva ograničenja takta (post-route + fizička optimizacija)</caption>
+  <thead>
+    <tr><th>Ograničenje</th><th class="n">WNS</th><th class="n">Krajnjih tačaka krši</th><th class="n">Takt</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>11,0 ns (radna tačka)</td><td class="n"><b>+0,268 ns</b></td><td class="n">0 od 15.458</td><td class="n">90,909 MHz</td></tr>
+    <tr><td>10,0 ns</td><td class="n"><b>+0,032 ns</b></td><td class="n">0 od 15.494</td><td class="n"><b>100 MHz</b></td></tr>
+  </tbody>
+</table>
+
+<p class="noind"><b>Zašto je radna tačka ipak 90,909&nbsp;MHz.</b> Sve brojke propusnosti u
+ovom dokumentu i celo merenje na ploči (poglavlje 10.4) izvedeni su na 90,909&nbsp;MHz.
+Prelazak na 100&nbsp;MHz zahtevao bi ponovnu gradnju i ponovno merenje svih vremena, a
+rezerva od +0,032&nbsp;ns je znatno tanja od +0,268&nbsp;ns na radnoj tački. Odstupanje od
+9,1&nbsp;% je unutar granice od 20&nbsp;% koju zadatak dopušta, pa je zadržana veća
+rezerva. <b>Bitno je da ograničenje više nije tehničko:</b> sistem 100&nbsp;MHz
+<i>zatvara</i>, a izbor niže frekvencije je odluka, ne nužnost.</p>
+
+<p class="noind">⚠️ Ovo je postalo tačno tek posle popravki AXI upisnog puta opisanih u
+odeljku 8.5. Pre njih je isto merenje davalo <b>&minus;0,054&nbsp;ns</b> i sistem nije
+zatvarao. Popravke su, pored uklanjanja zastoja, donele i <b>+0,086&nbsp;ns</b> rezerve.</p>
 
 <p class="noind"><b>Šta je vezujuće zavisi od ograničenja.</b> Na 11&nbsp;ns kritična je
 adresna putanja do memorije slike; na 10&nbsp;ns to više nije ona, nego
@@ -2165,15 +2185,17 @@ drugo, niti se uzrok sme pripisati iz jednog merenja.</p>
 <p class="noind"><b>Ograničenje je jezgro, a ne integracija.</b> Ranija verzija ovog
 odeljka tvrdila je suprotno &mdash; da RTL nije problem nego cena integracije. Kontrolno
 merenje to <b>obara</b>: na 10&nbsp;ns sistem se zaustavlja na putanji koja je kritična i
-u samostalnom jezgru, a cena integracije je razlika između +0,146&nbsp;ns samostalno i
-&minus;0,054&nbsp;ns u sistemu, dakle oko 0,20&nbsp;ns.</p>
+u samostalnom jezgru. Cena integracije je razlika između +0,146&nbsp;ns samostalno i
++0,032&nbsp;ns u sistemu, dakle oko <b>0,11&nbsp;ns</b> &mdash; upola manje nego pre
+popravki AXI upisnog puta.</p>
 
-<p class="noind"><b>Poluga koja nije iskorišćena.</b> Kvadriranje brojioca pred deliocem
-moglo bi da dobije još jedan protočni stepen, po ugledu na dva već izvedena preseka
-(odeljak 10.5). Time bi se putanja od 9,825&nbsp;ns podelila na dva takta i sistem bi
-zatvorio 100&nbsp;MHz, uz cenu od jednog takta po prozoru &mdash; oko 0,2&nbsp;%
-latencije. Nije primenjeno jer dizajn već zadovoljava rubriku, a bio bi to treći zahvat u
-verifikovano jezgro.</p>
+<p class="noind"><b>Poluga za rezervu, ne više za frekvenciju.</b> Kvadriranje brojioca
+pred deliocem moglo bi da dobije još jedan protočni stepen, po ugledu na dva već izvedena
+preseka (odeljak 10.5). Time bi se putanja od 9,865&nbsp;ns podelila na dva takta, uz cenu
+od jednog takta po prozoru &mdash; oko 0,2&nbsp;% latencije. Pošto sistem 100&nbsp;MHz sada
+<i>zatvara</i>, ta mera više nije put do pune frekvencije nego samo način da se rezerva na
+10&nbsp;ns podigne sa tankih +0,032&nbsp;ns. Nije primenjena &mdash; bio bi to treći zahvat
+u verifikovano jezgro.</p>
 
 <p class="noind">Ranije je kao poluga navođeno <b>inkrementalno računanje adrese</b>
 (adresa u registru uz korak, umesto množenja u svakom taktu). Ta mera je predložena na
@@ -2279,7 +2301,7 @@ razlikovati. Zamena krosbara deljenom magistralom smanjila je sam interkonekt sa
 35,6&nbsp;% (9.681 &rarr; 6.261&nbsp;LUT), jer je uklonilo šest konvertora širine. Ali
 izmerena vremenska rezerva se pri sužavanju porta pomerila samo sa &minus;0,233 na
 &minus;0,232&nbsp;ns, dakle praktično nimalo. (Obe vrednosti su iz istog kontrolnog para
-merenja na 10&nbsp;ns; aktuelna rezerva sistema na tom ograničenju je &minus;0,054&nbsp;ns
+merenja na 10&nbsp;ns; aktuelna rezerva sistema na tom ograničenju je +0,032&nbsp;ns
 &mdash; videti odeljak 10.3.)</p>
 
 <p class="noind">Brojke u ovoj tabeli namerno se razlikuju od Tabele 19 (6.261 naspram
@@ -2379,19 +2401,22 @@ nivou celog sistema:</p>
       rešenja: 3.783.652 naspram 10.360.183 (odeljak 10.6).</li>
 </ul>
 
-<p class="noind"><b>Dve slabosti se navode otvoreno.</b> Prva je blok-memorija: 65&nbsp;%
-zauzeća, i to je jedini resurs bez rezerve, a po njemu smo slabiji od referentnog rešenja.
-Uzrok je 32-bitna reč integralne slike kod koje je dovoljno 21 bit; suženje bi oslobodilo
-oko šest blokova (odeljak 10.2). Druga je radni takt: 90,909&nbsp;MHz umesto nominalnih
-100, dakle odstupanje od 9,1&nbsp;%. Sistemu za pun takt nedostaje svega
-<b>0,054&nbsp;ns</b>, na 6 od 15.481 krajnjih tačaka &mdash; ostvarivo je oko
-99,5&nbsp;MHz &mdash; ali PLL procesorskog sistema deli ulaznu frekvenciju celim brojem,
-pa između 90,909 i 100&nbsp;MHz nema ostvarive vrednosti. Vezujuća je putanja kvadriranja
-pred deliocem, ista koja ograničava i samostalno jezgro; jedan dodatni protočni stepen na
-njoj zatvorio bi 100&nbsp;MHz uz oko 0,2&nbsp;% latencije (odeljak 10.3).</p>
+<p class="noind"><b>Slabost se navodi otvoreno.</b> Blok-memorija je jedini resurs bez
+rezerve: 65&nbsp;% zauzeća, i to je jedina veličina po kojoj smo slabiji od referentnog
+rešenja. Uzrok je 32-bitna reč integralne slike kod koje je dovoljno 21 bit; suženje bi
+oslobodilo oko šest blokova i spustilo zauzeće na oko 55&nbsp;% (odeljak 10.2). Nije
+izvedeno jer memorija nije usko grlo, ali je to prva stavka ako se doda treća instanca.</p>
 
-<p>Preostaje generisanje konfiguracione datoteke i provera na realnoj ploči, uz softver
-prenesen iz izvršne specifikacije. Interfejs koji taj softver treba da koristi &mdash;
+<p class="noind"><b>Radni takt nije ograničenje.</b> Sistem <b>zatvara i 100&nbsp;MHz</b>
+(rezerva +0,032&nbsp;ns, 0 od 15.494 krajnjih tačaka). Radna tačka je zadržana na
+90,909&nbsp;MHz zato što su sva merenja propusnosti izvedena na njoj i zato što je rezerva
+tamo znatno veća (+0,268&nbsp;ns); odstupanje od 9,1&nbsp;% je unutar dopuštenih
+20&nbsp;%. Izbor niže frekvencije je dakle odluka, ne tehnička nužnost (odeljak 10.3).</p>
+
+<p><b>Sistem je proveren na realnoj ploči.</b> Konfiguraciona datoteka je generisana,
+softver prenesen iz izvršne specifikacije, i ceo tok izvršen na hardveru: 32 od 32 polja
+prepoznata, FEN znak po znak jednak zvaničnom, ukupno 1,782&nbsp;s naspram 3,667&nbsp;s
+referentnog rešenja (odeljak 10.4). Interfejs koji taj softver koristi &mdash;
 adresna mapa, registri, tok podataka i dva obavezna pravila &mdash; opisan je u
 poglavljima 8 i 9.</p>
 
