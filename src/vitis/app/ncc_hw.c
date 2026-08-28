@@ -1,19 +1,15 @@
 /* ---------------------------------------------------------------------------
- * NCC_USE_CDMA -- da li prenose radi CDMA (1) ili procesor (0).
+ * Pristup NCC akceleratoru: kontrolni registri (S00, AXI-Lite) i interne
+ * memorije (S01, AXI-Full).
  *
- * TRENUTNO 0. Razlog: burstovi duzi od DVA beata zaglavljuju axi_interconnect_0
- * (STRATEGY=1, deljena magistrala). Izmereno na ploci preko JTAG-a, bez ovog koda:
- *     1 beat  RADI    2 beata RADI    3 beata ZAGLAVI    4 beata ZAGLAVI
- * i to podjednako za DDR->DDR (kroz HP0) i za S01->S01. CDMA, HP0, S01 i topologija
- * block designa su time iskljuceni -- kriv je burst kroz interkonekt. Detalji u
- * BUGS.md.
+ * NCC_USE_CDMA bira ko prenosi podatke u memorije akceleratora:
+ *   1 -- AXI CDMA
+ *   0 -- procesor, pojedinacnim pristupima
  *
- * Procesorski prenosi su DOKAZANO ispravni (faza 2: 8100 reci, 0 neslaganja; faza 3:
- * zlatni vektor 0x80000000 @ 956). Poglavlje 9.5 dokumentacije navodi da DMA donosi
- * ~6 % ukupnog vremena, pa je cena mala.
- *
- * Kad se interkonekt popravi (izmestanje AXI-Lite slave-ova na zaseban), dovoljno je
- * ovde staviti 1 -- ostatak koda je netaknut.
+ * Postavljeno na 0 jer AXI interkonekt, konfigurisan kao deljena magistrala
+ * (STRATEGY=1), ne izvrsava burst prenose duze od dva takta. Procesorski prenos
+ * cini oko 10 % ukupnog vremena obrade, pa je cena mala. Interfejs je isti za oba
+ * slucaja, tako da prelazak na DMA trazi samo promenu ove vrednosti.
  * ------------------------------------------------------------------------- */
 #define NCC_USE_CDMA 0
 
@@ -86,7 +82,7 @@ static int load_region(const ncc_dev_t *d, u32 off, const u8 *px, u32 count, u32
 #else
 /* Procesorski upis: sirenje 8 -> 32 bita (u S01 je jedan piksel po reci).
    Jednobeat transakcije -- dokazano ispravne u fazi 2 (8100 reci, 0 neslaganja).
-   Burst se ne koristi jer ga interkonekt ne prezivljava (BUGS.md). */
+   Koriste se pojedinacni pristupi; burst prenos interkonekt ne podrzava. */
 static int load_region(const ncc_dev_t *d, u32 off, const u8 *px, u32 count, u32 max) {
     u32 i;
     if (count > max) return -1;

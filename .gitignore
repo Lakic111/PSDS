@@ -55,3 +55,6 @@ NA/
 clockInfo.txt
 dfx_runtime.txt
 src/vhdl_NCC_IP.zip
+
+# Rezervna kopija pune verzije dokumentacije -- git vec cuva prethodnu verziju.
+*.html.bak

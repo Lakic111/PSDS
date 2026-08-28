@@ -3,9 +3,18 @@
 #include "ncc_logic.h"
 #include "data.h"
 #include "xil_printf.h"
+/* XTime API stoji na razlicitim mestima u dva toka:
+   - klasican BSP (xsct)          -> xtime_l.h
+   - SDT BSP (Vitis Unified IDE)  -> xiltimer.h + xtimer_config.h
+   Unified tok definise -DSDT, pa se biramo po tome. */
+#ifdef SDT
+#include "xiltimer.h"
+#include "xtimer_config.h"
+#else
 #include "xtime_l.h"
+#endif
 
-/* Privremeno merenje po fazama (Task 8). Brojaci su u tikovima globalnog tajmera. */
+/* Merenje vremena po fazama obrade. Brojaci su u tikovima globalnog tajmera. */
 u64 prof_load = 0;   /* upis slike i sablona u S01 */
 u64 prof_read = 0;   /* citanje mape rezultata */
 u64 prof_wait = 0;   /* cekanje da jezgro zavrsi */
