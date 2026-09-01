@@ -1,0 +1,2 @@
+# bash skripte moraju ostati LF -- na Linuxu CRLF daje "$: command not found"
+*.sh text eol=lf
