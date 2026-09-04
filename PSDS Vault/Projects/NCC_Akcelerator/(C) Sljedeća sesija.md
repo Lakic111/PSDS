@@ -1,5 +1,148 @@
 # Sljedeća sesija
 
+## Primjedbe profesorke na predatu dokumentaciju (2026-09-01)
+
+> „Projekat je dobro urađen. Potrebno je ispraviti ASMD, koristite način označavanja
+> objašnjen na vježbama. Dodajte i sliku integrisanog sistema iz Vivada."
+
+### 1. ASMD — URAĐENO (u HTML izvoru; PDF/DOCX čekaju tačku 2)
+
+Mjerodavna notacija je **Slika 3.8 „Struktura ASM bloka"** (definicija oblika) i
+**Slika 4.5** (primjer, `06 Prilozi/Vezbe/Vezba-3-5-RT-Modeling.pdf`, str. 119).
+Vokabular ima **tri oblika + okvir**, i svaki ima svoju namjenu:
+
+| Oblik | Namjena (po Slici 3.8) |
+|---|---|
+| isprekidana kontura + ime stanja | jedan ASM blok = jedno stanje = jedan takt |
+| pravougaonik (oštri uglovi) | *state* blok — **Murovi izlazi**, tj. bezuslovne RT operacije |
+| šestougao, grane `T`/`F` | *test* blok — Bulov izraz; ne uvodi novo stanje |
+| zaobljeni pravougaonik (stadion) | *uslovni izlazni* blok — **Milijevi izlazi**, RT operacije **samo na toj grani** |
+
+⚠️ Ključno: svaka RT operacija mora biti **u obliku**, nikad natpis uz strelicu. Zadnje
+takvo mjesto (`den = 0` → `result_q <= 0` u `S_NCC_SQ`) dobilo je svoj uslovni izlazni
+blok, pa je okvir tog ASM bloka proširen udesno da ga obuhvati — kao na Slici 3.8, gdje
+uslovni izlazni blok stoji sa strane, unutar iste isprekidane konture.
+
+Šta je bilo pogrešno u predatoj verziji i popravljeno:
+
+- svi blokovi su bili grupisani samo po fazama (bledozelena pozadina), **granica
+  pojedinačnog stanja se nije vidjela**;
+- odluke su bile rombovi umjesto šestouglova, grane `da`/`ne` umjesto `T`/`F`;
+- **uslovne** RT operacije bile su nacrtane ispred odluke, kao da se izvršavaju svaki
+  takt — najgore u stanjima čekanja (`S_CALC_MEAN_WAIT`, `S_L_U_WAIT`, `S_NCC_WAIT`),
+  gdje se registar upisuje tek kad delilac javi `done`. Prebačene iza šestougla, u
+  zaobljenu kutiju;
+- na dva mjesta (učitavanje slike i šablona) uslov petlje bio je samo natpis uz
+  strelicu, **bez čvora odluke**;
+- ⚠️ **`S_L_YX_FILL` je imao granu koje na dijagramu uopšte nije bilo**:
+  `if tmp_w=1 and tmp_h=1 → S_L_YX_DRAIN` (degenerisani šablon 1×1);
+- `S_IDLE` je pisao `busy<=0`, a RTL tu postavlja `busy<=1` (nula je u `S_DONE`);
+- reset je bio oval — vježba taj simbol nema, pa je sada obična strelica s oznakom
+  (g03 primjer koristi oval `BEGIN`, ali mjerodavna je vježba);
+- strelice su ulazile u uglove kutija i sjekle blokove (`S_DONE`, `S_WRITE_RESULT`) —
+  sada sve ulaze na sredinu ivice.
+
+**Cijeli tok je stanje-po-stanje provjeren protiv `src/vhdl/ncc_core.vhd`** — svih 23
+stanja i sve grane se poklapaju. Provjera je rađena čitanjem `case state_reg` bloka,
+ne iz beleški.
+
+### 2. Slika integrisanog sistema iz Vivada — URAĐENO (2026-09-01)
+
+Korisnik je snimio screenshot BD canvasa iz Vivado GUI-ja (nije skriptabilno u batch
+modu — `write_bd_layout` ne postoji, `write_schematic` je za netlist, ne za BD canvas).
+
+- slika: `02 Dokumentacija/slika_block_design.png` (1461×787)
+- ubačena kao **Slika 5** u odjeljak 9.1, poslije ručno crtane Slike 4 (topologija), uz
+  pasus koji kaže da je sve na slici posljedica `create_bd.tcl`, dakle reproducibilno
+- ⚠️ **`_alat_docx/napravi_docx.py` je morao da se dopuni**: `slike` lista sada ima peti
+  unos (screenshot ide direktno, nije SVG pa ga `extract_svg.py` preskače), a kapija je
+  `11 → 12` slika (5 figura + 7 formula)
+
+### 3. Unakrsna provjera ASMD-a sa `ncc_core.vhd` (2026-09-01)
+
+Prošao sam svih 23 `when` grana u `comb_proc` i uporedio sa dijagramom. **Prelazi su
+se svi poklapali**, ali je sadržaj kutija imao osam grešaka — sve ispravljene:
+
+| Stanje | Bilo | RTL |
+|---|---|---|
+| `S_LOAD_IMG_DATA` | `x,y < img` | `x+1 < img_w` **ili** `y+1 < img_h` |
+| `S_LOAD_TMPL_DATA` | `p < N_t` | `p+1 < N_t` |
+| `S_NCC_SQ` | `den = 0` | `sum_den_f = 0` **ili** `sum_den_t = 0` |
+| `S_LOAD_IMG_DATA` | `row_sum <= row_sum + img_data_i` | na `x = 0` upisuje piksel, ne akumulira |
+| `S_CALC_MEAN_WAIT`, `S_L_U_WAIT` | `quotient` | `dm_quot` |
+| `S_L_U_B..E` | `sum_f` | `sum_f_partial` |
+| `S_WRITE_RESULT` | grana `T` bez oznake | `u <= u+1` |
+| `S_L_YX_RUN`, `S_L_YX_DRAIN` | tri akumulacije bezuslovne | gejtovane sa `if mac_v_reg = '1'` |
+
+Zadnja je bila i strukturna: oba bloka su dobila **drugi šestougao** `mac_v = 1` i
+akumulacije u uslovnom izlaznom bloku, sa `F` granom koja zaobilazi. To je legalno —
+u vježbi `idle` blok ima dvije odluke.
+
+⚠️ **Namjerno izostavljeno** (dogovoreno „sažeto"): inkrementi brojača `x/y/p/u/v` po
+granama petlji, `p <= 0 ; sum_t <= 0` na izlazu iz faze A, `x <= 1` u `S_L_YX_FILL`.
+
+### 4. Dijagram podijeljen na Sliku 1a i 1b
+
+Sa punim RT operacijama dijagram je narastao na 660×2056 (odnos 1:3,1) i na A4 se
+skalirao na ~80 mm širine — tekst ~2,5 pt, nečitljiv. **Podijeljen na dvije slike**
+(1a: `S_IDLE`→`S_L_U_WAIT`, 1b: `S_L_YX_FILL`→`S_DONE`), čime je tekst 2× veći.
+
+Pet grana koje presijecaju podjelu obilježeno je krugovima: **A** nastavak toka,
+**B** kraj obrade, **C** povratak u `S_IDLE`, **D** naredni prozor, **E** novi red.
+
+⚠️ `_alat_docx/napravi_docx.py` opet dopunjen: sada **6 figura** (`fig1..fig5` + block
+design), kapija `13` slika.
+
+### 5. PDF i DOCX regenerisani (2026-09-01)
+
+`PSDS_dokumentacija_y25-g10_Korak2-8.pdf` — **38 strana**; `.docx` 348 KB, 13 slika.
+
+⚠️ **Zamka pri generisanju PDF-a:** headless Edge povremeno vrati PDF od 2 strane
+(59 KB) umjesto punog. Ne prijavljuje grešku. **Uvijek provjeriti broj strana** prije
+kopiranja preko postojećeg fajla:
+
+```bash
+python3 -c "d=open('out.pdf','rb').read(); print(d.count(b'/Type /Page'))"
+```
+
+Isto važi za `--screenshot`: putanja **mora biti apsolutna**, inače Edge javi
+`Access is denied` i tiho ostavi stari PNG.
+
+---
+
+## ✅ MEŠOVITA SIMULACIJA ZAVRŠENA (2026-09-04)
+
+Dodatni zahtjev profesora/asistenta je **ispunjen**: SystemC ESL model i VHDL RTL
+dokazano daju isti rezultat u **jednoj zajedničkoj Xcelium kosimulaciji**, ne
+poređenjem dva odvojeno snimljena golden fajla.
+
+```
+ESL (ncc0): best = 0x80000000  @ (u=32, v=14)
+RTL (ncc1): best = 0x80000000  @ (u=32, v=14)   busy taktova = 2461201
+Mapa 66x76 = 5016 pozicija: 5016 bit-identicnih (100 %)
+```
+
+Puni zapis (izlaz, jedina greška prevođenja, brojevi, zamke) je u
+`01 Razvoj/(C) Mešovita simulacija (SystemC + VHDL) - Plan implementacije.md`,
+sekcija „ISHOD: KOSIMULACIJA PROŠLA".
+
+Ukratko šta je bilo potrebno:
+
+1. Prenos 14 fajlova klipbordom u `~/ncc_cosim` na `ws1` — prošlo iz prve,
+   md5 kapija 14/14 OK. Redni brojevi i `.txt` se brišu pri snimanju.
+2. `sed -i 's/$//' *` (CRLF iz Windows klipborda), pa `md5sum -c`.
+3. **Jedina prava greška:** nedostajao `#define SC_INCLUDE_DYNAMIC_PROCESSES`
+   prije `#include <systemc>` — `tlm_utils::simple_target_socket` iznutra zove
+   `sc_spawn`/`sc_bind`, a Cadence-ov SystemC ih gejtuje tim define-om.
+   Popravljeno trajno u `src/common.hpp`.
+4. `. amsgo` → `./run_cosim.sh`. Bez `-gui`.
+
+Mapa je ispala **100 %** bit-identična, iako je plan tvrdio da neće biti (ESL
+dijeli u `double`, RTL cjelobrojno) — na Q31 skali pada na isti cijeli broj.
+Poređenje nije artefakt: `m0`/`m1` su dvije odvojene mape sa dva TLM socketa.
+
+`clock skew` upozorenja na `nethome` su bezopasna — NFS sat, ne build.
+
 ## PRVO za sljedeću sesiju — Korak 10 (posljednji)
 
 > **Stanje 2026-08-27. KORACI 1-9 ZAVRŠENI — 90 bodova.** Preostaje **Korak 10 (10)**.

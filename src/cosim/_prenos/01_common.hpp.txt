@@ -20,7 +20,7 @@ const uint64_t ADDR_DMA  = 0x60000000;
 const uint64_t ADDR_DDR  = 0x00000000;
 
 // BRAM raspored (offseti unutar BRAM-a)
-const uint64_t BRAM_TMP_COARSE = 0x10000;  // grubi (2x smanjeni) šabloni
+const uint64_t BRAM_TMP_COARSE = 0x10000;  // grubi (2x smanjeni) sabloni
 const uint64_t BRAM_SEG_FULL   = 0x80000;  // pun 90x90 segment (DMA)
 const uint64_t BRAM_SEG_COARSE = 0x90000;  // grubi 45x45 segment (CPU upisuje)
 
@@ -29,8 +29,8 @@ const uint64_t REG_IMG_W     = 0x00;
 const uint64_t REG_IMG_H     = 0x04;
 const uint64_t REG_TMP_W     = 0x08;
 const uint64_t REG_TMP_H     = 0x0C;
-const uint64_t REG_IMG_ADDR  = 0x10; // BRAM adresa segmenta slike (NCC ga sam čita)
-const uint64_t REG_TMP_ADDR  = 0x14; // BRAM adresa šablona (NCC ga sam čita)
+const uint64_t REG_IMG_ADDR  = 0x10; // BRAM adresa segmenta slike (NCC ga sam cita)
+const uint64_t REG_TMP_ADDR  = 0x14; // BRAM adresa sablona (NCC ga sam cita)
 const uint64_t REG_CTRL      = 0x30;
 const uint64_t REG_STATUS    = 0x34;
 const uint64_t ADDR_RESULTS  = 0x40;

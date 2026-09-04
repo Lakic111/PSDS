@@ -1,0 +1,116 @@
+==========================================================================
+  PRENOS NA ws2  --  mesovita simulacija (SystemC ESL + VHDL RTL)
+==========================================================================
+
+SVAKI fajl u ovom folderu je JEDAN ceo dokument za copy-paste.
+Otvori ga, Ctrl+A, Ctrl+C -> u gedit na ws2 -> Ctrl+V -> snimi pod imenom
+koje pise u koloni 'snimi kao'. Broj u imenu je samo redosled, nije deo imena.
+
+ODREDISTE NA CentOS-u:   ~/ncc_cosim/        (= /nethome/stefan.lakic/ncc_cosim/)
+SVI fajlovi idu RAVNO tu -- BEZ podfoldera. #include-i su pisani bez putanje,
+pa ce svaki podfolder polomiti prevodjenje.
+
+--------------------------------------------------------------------------
+KORAK 0 -- napravi folder na ws2
+--------------------------------------------------------------------------
+
+    mkdir -p ~/ncc_cosim
+    cd ~/ncc_cosim
+    gedit &          # ili kwrite &
+
+--------------------------------------------------------------------------
+KORAK 1 -- prenesi svih 14 fajlova, ovim redom
+--------------------------------------------------------------------------
+
+br     snimi kao                linija  md5 (posle Koraka 2)
+01     common.hpp                   44  b9d3627beebe08aded48509308a0b9b4
+02     ncc.hpp                      41  7c87ecc7f2a03b593dcb9cc7dd9de35c
+03     ncc.cpp                     193  a778bfe31a54c735060afbc340af7eba
+04     bram.hpp                     21  65a85d0c6416d6947afeffd4867c94db
+05     bram.cpp                     49  01399380ca57806cd3296d136f228f6f
+06     ncc_core_wrap.hpp            77  2aae3a3a467b71c10d0974c0a3b43340
+07     ncc_target_rtl.hpp           78  5ed1d0842753dac6e8c89794678d44dd
+08     ncc_target_rtl.cpp          191  fde2e03a483c0f996227a0deacb643f9
+09     sc_main_cosim.cpp           281  4fd0b4b84083e38c8a5283610425d15e
+10     ncc_pkg.vhd                  41  9b74232297daaca3ed350186471c0f4d
+11     ncc_core.vhd                554  f957c44b35c4c5e15d7894ff4637a348
+12     seg90.hex                    90  08f8cd32743311f4c001c16e4ec859ae
+13     crnitop.hex                  15  695ee9d6548290187f4a80a2dc9feaa8
+14     run_cosim.sh                 44  ebbfdff0db61d780350f58e9efba8c9b
+
+Broj linija proveri ODMAH posle snimanja svakog fajla:
+
+    wc -l ~/ncc_cosim/<ime>
+
+Komentari u fajlovima iz projekta (common.hpp, ncc.hpp, ncc.cpp, bram.*) su
+preslovljeni u cist ASCII (s, c, z umesto s, c, z) -- namerno, da md5 bude
+prava kapija a ne zrtva remote sesije. Kod je nepromenjen.
+
+Ako se ne poklapa -- paste je presecen, ponovi taj fajl. Tiho presecen izvor
+pravi greske koje se satima traze na pogresnom mestu.
+
+--------------------------------------------------------------------------
+KORAK 2 -- OBAVEZNO: skini CRLF (Windows klipbord ga uvek donese)
+--------------------------------------------------------------------------
+
+    cd ~/ncc_cosim
+    sed -i 's/
+$//' *
+    md5sum *
+
+Tek posle ovog sed-a se md5 iz tabele gore poklapa. Bez njega ni bash nece
+hteti da pokrene run_cosim.sh, ni Xcelium da prevede VHDL.
+
+--------------------------------------------------------------------------
+KORAK 3 -- pokreni
+--------------------------------------------------------------------------
+
+    . amsgo                 # SA TACKOM (source) -- bez ovoga nema xmsc_run
+    cd ~/ncc_cosim
+    chmod +x run_cosim.sh
+    ./run_cosim.sh
+
+run_cosim.sh sam jos jednom skine CRLF, proveri da su svi fajlovi tu,
+ispise wc/md5 za ncc_pkg.vhd i ncc_core.vhd, obrise xcelium.d/INCA_libs i
+pozove:
+
+    xmsc_run -sc_main -xmvhdl_args,-v200x \
+        sc_main_cosim.cpp ncc_target_rtl.cpp ncc.cpp bram.cpp \
+        ncc_pkg.vhd ncc_core.vhd
+
+--------------------------------------------------------------------------
+STA SE OCEKUJE NA IZLAZU
+--------------------------------------------------------------------------
+
+    === MESOVITA SIMULACIJA: SystemC ESL (ncc0) vs VHDL RTL (ncc1) ===
+    Ucitano: segment 90x90, sablon 25x15
+    Start oba bloka @ ... 
+    Oba bloka javila done @ ...
+    --- REZULTAT ---
+    ESL (ncc0): best = 0x80000000  @ (u=32, v=14)
+    RTL (ncc1): best = 0x80000000  @ (u=32, v=14)   busy taktova = ~3.8M
+    Mapa 66x76 = 5016 pozicija: N bit-identicnih (...)
+    GOLDEN OK: ESL i RTL daju isti vrh 0x80000000 @ (32,14) u JEDNOJ
+    zajednickoj simulaciji.
+
+Procenat bit-identicnih pozicija NECE biti 100 % i to nije greska: ESL deli
+u double (ncc.cpp), RTL celobrojnim seq_divider-om. Tvrdo se proverava samo
+vrh, koji je golden iz Koraka 1.
+
+Trajanje: ~3,8M taktova RTL-a. Bez -gui. Ako treba debug, prvo smanji test.
+
+--------------------------------------------------------------------------
+AKO PUKNE
+--------------------------------------------------------------------------
+
+Nista od ovog koda nije prevedeno na Windows masini (nema SystemC
+biblioteke), pa je prvi krug gresaka prevodjenja ocekivan.
+
+Ako se PREVEDE ali rezultat ne valja: prvo sumnjaj na transaktor
+(ncc_target_rtl.cpp), NE na ncc_core.vhd. Jezgro je nezavisno verifikovano
+cetiri puta: C kernel (Korak 1), VHDL testbench (Korak 4), sinteza, ploca.
+
+Poznate zamke iz Taska 1:
+  * -v200x NIJE fleg xmsc_run-a -- ide kroz -xmvhdl_args,-v200x
+  * podrazumevani VHDL dijalekt je 87; bez flega puca na 'end entity'
+  * xcelium.d/INCA_libs se moraju obrisati izmedju pokretanja
