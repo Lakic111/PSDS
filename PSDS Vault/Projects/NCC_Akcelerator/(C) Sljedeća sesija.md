@@ -130,7 +130,7 @@ Ukratko šta je bilo potrebno:
 
 1. Prenos 14 fajlova klipbordom u `~/ncc_cosim` na `ws1` — prošlo iz prve,
    md5 kapija 14/14 OK. Redni brojevi i `.txt` se brišu pri snimanju.
-2. `sed -i 's/$//' *` (CRLF iz Windows klipborda), pa `md5sum -c`.
+2. `sed -i 's/\r$//' *` (CRLF iz Windows klipborda), pa `md5sum -c`.
 3. **Jedina prava greška:** nedostajao `#define SC_INCLUDE_DYNAMIC_PROCESSES`
    prije `#include <systemc>` — `tlm_utils::simple_target_socket` iznutra zove
    `sc_spawn`/`sc_bind`, a Cadence-ov SystemC ih gejtuje tim define-om.
