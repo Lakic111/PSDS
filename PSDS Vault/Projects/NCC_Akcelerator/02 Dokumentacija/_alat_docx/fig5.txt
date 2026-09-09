@@ -1,0 +1,3 @@
+1320 860
+Slika 4. Topologija integrisanog sistema ncc_system:
+Zynq PS, dve instance akceleratora, DMA memorija&ndash;memorija i jedan AXI interkonekt

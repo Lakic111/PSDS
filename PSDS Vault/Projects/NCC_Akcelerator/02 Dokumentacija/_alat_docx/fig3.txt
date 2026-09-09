@@ -1,0 +1,4 @@
+1400 500
+Slika 2. Trostepena protočnost unutrašnje petlje: preklapanje izdavanja
+adrese, registrovanja razlika df/dt
+i akumulacije

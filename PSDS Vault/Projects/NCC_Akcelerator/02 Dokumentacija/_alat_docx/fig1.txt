@@ -1,0 +1,2 @@
+1320 2340
+Slika 1a. ASMD dijagram, prvi deo &mdash; stanja S_IDLE do S_L_U_WAIT (učitavanje segmenta i šablona, priprema prozora). Krugovi A&ndash;E su veze sa Slikom 1b: A nastavak toka, B kraj obrade, C povratak u S_IDLE, D naredni prozor u redu, E novi red prozora.

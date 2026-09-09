@@ -118,8 +118,6 @@
 
   <div class="rule"></div>
   <div class="title">Hardverski akcelerator za prepoznavanje šahovskih figura zasnovan na normalizovanoj unakrsnoj korelaciji</div>
-  <div class="sub">Od algoritma do implementiranog sistema:<br>
-  RT model, ASMD dijagram, pakovanje u IP jezgro i analiza integrisanog sistema</div>
   <div class="rule"></div>
 
   <div class="meta">
@@ -132,7 +130,7 @@
 <h1 class="first">Sadržaj</h1>
 <ul>
   <li class="l1">1. Uvod</li>
-  <li class="l2">1.1. Predmet i obim dokumenta</li>
+  <li class="l2">1.1. Predmet</li>
   <li class="l2">1.2. Polazna tačka: ESL model sistema</li>
   <li class="l2">1.3. Ciljna platforma i korišćeni alati</li>
 
@@ -188,15 +186,12 @@
   <li class="l2">9.2. Adresna mapa</li>
   <li class="l2">9.3. Tok podataka po jednom polju table</li>
   <li class="l2">9.4. Dva pravila koja softver mora poštovati</li>
-  <li class="l2">9.5. Zašto DMA, iako nije performansni dobitak</li>
 
   <li class="l1">10. Analiza integrisanog sistema</li>
-  <li class="l2">10.1. Metod</li>
-  <li class="l2">10.2. Utrošeni resursi</li>
-  <li class="l2">10.3. Vremenska analiza i radni takt</li>
-  <li class="l2">10.4. Propusnost sistema</li>
-  <li class="l2">10.5. Put do zatvaranja vremenskih ograničenja</li>
-  <li class="l2">10.6. Poređenje sa referentnim rešenjem</li>
+  <li class="l2">10.1. Utrošeni resursi</li>
+  <li class="l2">10.2. Vremenska analiza i radni takt</li>
+  <li class="l2">10.3. Propusnost sistema</li>
+  <li class="l2">10.4. Poređenje sa referentnim rešenjem</li>
 
   <li class="l1">11. Zaključak</li>
 </ul>
@@ -205,7 +200,7 @@
 <!-- ============================ 1. UVOD ============================ -->
 <h1>1. Uvod</h1>
 
-<h2>1.1. Predmet i obim dokumenta</h2>
+<h2>1.1. Predmet</h2>
 
 <p>Projekat realizuje hardverski akcelerator za prepoznavanje šahovskih figura sa
 fotografije table. Slika table dimenzija 720&times;720 piksela deli se na 64 polja
@@ -216,17 +211,13 @@ figura, a iz mape skorova se rekonstruiše pozicija u standardnoj Forsyth-Edward
 preko 70&nbsp;% procesorskog vremena i time prirodan kandidat za akceleraciju u
 programabilnoj logici.</p>
 
-<p class="noind"><b>Obim dokumenta.</b> Dokument prati put od algoritma do implementiranog
-sistema, u tri celine. Prva (poglavlja 2&ndash;6) opisuje <b>algoritam i RT model</b>:
-matematičku osnovu i tri optimizacije, uklanjanje petlji, interfejs, dijagram algoritamske
-mašine stanja i podelu na datapath i controlpath. Druga (poglavlje 7) daje <b>analizu
-samostalnog jezgra</b> posle sinteze i implementacije. Treća (poglavlja 8&ndash;10) opisuje
-<b>put do sistema na ploči</b>: pakovanje jezgra u IP blok sa AXI interfejsom, integraciju
-sa procesorskim sistemom i DMA kontrolerom, i analizu celog integrisanog dizajna.</p>
-
-<p class="noind">Sve navedene brojke su izmerene, a ne procenjene, i mogu se
-reprodukovati skriptama iz repozitorijuma. Gde se merenje razlikuje od ranije objavljene
-vrednosti ili od referentnog rešenja, razlika je izričito navedena i obrazložena.</p>
+<p class="noind">Dokument prati put od algoritma do implementiranog sistema, u tri
+celine. Prva (poglavlja 2&ndash;6) opisuje algoritam i RT model: matematičku osnovu i
+tri optimizacije, uklanjanje petlji, interfejs, dijagram algoritamske mašine stanja i
+podelu na datapath i controlpath. Druga (poglavlje 7) daje analizu samostalnog jezgra
+posle sinteze i implementacije. Treća (poglavlja 8&ndash;10) opisuje put do sistema na
+ploči: pakovanje jezgra u IP blok sa AXI interfejsom, integraciju sa procesorskim
+sistemom i DMA kontrolerom, i analizu celog integrisanog dizajna.</p>
 
 <h2>1.2. Polazna tačka: ESL model sistema</h2>
 
@@ -247,31 +238,15 @@ kao <b>izvršna specifikacija</b>: RTL model mora dati bit-identičan rezultat.<
 
 <p>Ciljna platforma je razvojna ploča <b>Digilent Zybo</b> sa uređajem
 <b>xc7z010clg400-1</b> (Zynq-7000). Uređaj raspolaže sa 17.600 LUT, 35.200 flip-flopova,
-80 DSP48E1 blokova i 60 blokova RAMB36. Ploča nosi <b>512&nbsp;MB</b> DDR3 memorije
-(MT41K128M16 JT-125) i kristal procesorskog sistema od 50&nbsp;MHz; u alatu joj odgovara
-oznaka <span class="mono">digilentinc.com:zybo:part0:2.0</span>.</p>
-
-<p class="noind">Napomena o varijanti ploče: postoji i novija <span class="mono">Zybo
-Z7-10</span> sa istim uređajem, ali drugačijim procesorskim sistemom (kristal
-33,333&nbsp;MHz, 1&nbsp;GB DDR3). Razlikuju se na oko &mdash; originalni Zybo ima
-<b>VGA</b> i jedan HDMI, dok Z7-10 ima dva HDMI izlaza i nijedan VGA. Sve brojke u ovom
-dokumentu merene su sa presetom <b>originalnog Zybo</b>.</p>
-
-<p class="noind">Napomena o oznaci uređaja: dokumentacija prethodne faze projekta navodi
-<span class="mono">xc7z010-clg225-2</span>, ali to je bio podrazumevani uređaj alata
-Vitis HLS, a ne stvarna ploča &mdash; <b>nijedna Digilent ploča sa Zynq-7010 ne koristi
-kućište <span class="mono">clg225</span></b>. Isti je čip i isti kapacitet, ali je
-brzinska klasa <span class="mono">-1</span> umesto <span class="mono">-2</span>, dakle
-sporija. Sve brojke u ovom dokumentu su merene na
-<span class="mono">clg400-1</span>.</p>
+80 DSP48E1 blokova i 60 blokova RAMB36. Ploča nosi <b>512&nbsp;MB</b> DDR3 memorije.</p>
 
 <p class="noind">Nominalni takt programabilne logike je 100&nbsp;MHz (period 10&nbsp;ns) i
 samostalno jezgro ga ispunjava (odeljak 7.3). U integrisanom sistemu takt je
 <b>90,909&nbsp;MHz</b>, jer PLL procesorskog sistema za traženih 95&nbsp;MHz daje
-1000/11 &mdash; odstupanje od nominalnih 100&nbsp;MHz je 9,1&nbsp;% (odeljak 10.3).</p>
+1000/11 &mdash; odstupanje od nominalnih 100&nbsp;MHz je 9,1&nbsp;% (odeljak 10.2).</p>
 
-<p>RT model je opisan u jeziku <b>VHDL-2008</b> i razvijen ručno iz ASMD dijagrama,
-bez visokonivoske sinteze. Simulacija je izvršena alatom <b>XSim</b>, a sinteza i
+<p>RT model je opisan u jeziku <b>VHDL-2008</b> i razvijen ručno iz ASMD dijagrama, ne
+kroz HLS. Simulacija je izvršena alatom <b>XSim</b>, a sinteza i
 vremenska analiza alatom <b>Vivado 2025.2</b>.</p>
 
 <!-- ============================ 2. ALGORITAM ============================ -->
@@ -306,7 +281,7 @@ na promenu osvetljenja, što je i razlog za izbor NCC-a umesto obične korelacij
 <p>Direktna implementacija ovog izraza je za hardver neprihvatljivo skupa: sadrži
 kvadratni koren, deljenje po svakoj poziciji prozora i ponovno sumiranje prozora u
 svakoj tački. Sledeća tri odeljka opisuju tri transformacije kojima se izraz svodi
-na oblik pogodan za realizaciju u programabilnoj logici, <b>bez gubitka tačnosti</b>.</p>
+na oblik pogodan za realizaciju u programabilnoj logici, bez gubitka tačnosti.</p>
 
 <h2>2.2. Optimizacija 1: kvadrirana korelacija (eliminacija korena)</h2>
 
@@ -405,19 +380,18 @@ obrađuje se eksplicitno: rezultat je tada 0.</p>
   </tbody>
 </table>
 
-<p><b>Označenost razlika.</b> Veličine <span class="mono">diff_f</span>,
-<span class="mono">diff_t</span> i <span class="mono">sum_num</span> su
-<b>označene</b>: razlika piksela i srednje vrednosti je negativna kad god je piksel
-tamniji od proseka, a suma proizvoda tih razlika menja znak. Broj bita (9 i 27)
-određen je opsegom vrednosti, a označenost predznakom.</p>
+<p><span class="mono">diff_f</span>, <span class="mono">diff_t</span> i
+<span class="mono">sum_num</span> su namerno označeni tipovi: razlika piksela i srednje
+vrednosti je negativna kad god je piksel tamniji od proseka, a suma proizvoda tih
+razlika prati taj predznak. Zato ove veličine moraju biti <i>signed</i>, ne
+<i>unsigned</i>; broj bita (9 i 27) ostaje određen samo opsegom vrednosti.</p>
 
-<p><b>Zašto je datapath bit-egzaktan.</b> Srednje vrednosti <i>f&#772;</i> i
-<i>t&#772;</i> se zaokružuju na ceo broj <b>pre</b> oduzimanja (deljenje sa
-zaokruživanjem: <span class="mono">(suma + count/2) / count</span>). Time su
-<span class="mono">diff_f</span> i <span class="mono">diff_t</span> egzaktni celi
-brojevi, pa se kroz desetine hiljada sabiranja u akumulatorima ne akumulira nikakva
-greška zaokruživanja. Ovo je ključna projektna odluka: ceo datapath je celobrojan,
-a jedina veličina u formatu sa fiksnim zarezom je konačni rezultat.</p>
+<p>Ceo datapath je zbog toga celobrojan. Srednje vrednosti <i>f&#772;</i> i
+<i>t&#772;</i> se zaokružuju na ceo broj pre oduzimanja (deljenje sa zaokruživanjem:
+<span class="mono">(suma + count/2) / count</span>), pa su <span class="mono">diff_f</span>
+i <span class="mono">diff_t</span> egzaktni celi brojevi &mdash; kroz desetine hiljada
+sabiranja u akumulatorima ne ulazi nikakva greška zaokruživanja. Jedina veličina u
+formatu sa fiksnim zarezom je konačni rezultat.</p>
 
 <h2>2.6. Promenljiva veličina šablona</h2>
 
@@ -444,7 +418,19 @@ tri mesta sa petljama i ukupno četiri brojača.</p>
 
 <h2>3.1. Izgradnja integralne slike</h2>
 
-<p class="noind">Dva brojača, <span class="mono">y</span> i <span class="mono">x</span>:</p>
+<p class="noind">Pre transformacije, dvostruka <span class="mono">for</span> petlja:</p>
+
+<pre>for (y = 0; y &lt; img_h; y++) {
+    row_sum = 0;
+    for (x = 0; x &lt; img_w; x++) {
+        row_sum = row_sum + image[y*img_w + x];
+        SAT[(y+1)*(img_w+1) + (x+1)] = SAT[y*(img_w+1) + (x+1)] + row_sum;
+    }
+}</pre>
+
+<p class="noind">Posle transformacije, dva brojača (<span class="mono">y</span> i
+<span class="mono">x</span>) postaju registri, a telo petlje stanja s oznakom
+<span class="mono">if</span>&ndash;<span class="mono">goto</span>:</p>
 
 <pre>    y = 0
 L1: if (y &gt;= img_h) goto L1_END
@@ -462,7 +448,15 @@ L1_END:</pre>
 
 <h2>3.2. Srednja vrednost šablona</h2>
 
-<p class="noind">Jedan brojač, <span class="mono">p</span>, kao linearni indeks kroz šablon:</p>
+<p class="noind">Pre transformacije:</p>
+
+<pre>sum_t = 0;
+for (p = 0; p &lt; tmp_w*tmp_h; p++)
+    sum_t = sum_t + templ[p];
+template_mean = (sum_t + count/2) / count;</pre>
+
+<p class="noind">Posle transformacije, jedan brojač <span class="mono">p</span> kao
+linearni indeks kroz šablon:</p>
 
 <pre>    p = 0; sum_t = 0
 L3: if (p &gt;= tmp_w*tmp_h) goto L3_END
@@ -479,6 +473,33 @@ prolazi kroz pozicije prozora, unutrašnji par <span class="mono">(y,&nbsp;x)</s
 kroz piksele šablona. Brojači <span class="mono">y</span> i <span class="mono">x</span>
 su isti registri kao u odeljku 3.1 &mdash; dve faze nisu istovremeno aktivne, pa se
 resurs deli.</p>
+
+<p class="noind">Pre transformacije, četiri ugnježdene <span class="mono">for</span> petlje:</p>
+
+<pre>for (v = 0; v &lt; res_h; v++) {
+    for (u = 0; u &lt; res_w; u++) {
+        sum_f = SAT[(v+th)*(iw+1)+(u+tw)] - SAT[v*(iw+1)+(u+tw)]
+              - SAT[(v+th)*(iw+1)+u]      + SAT[v*(iw+1)+u];
+        f_bar = (sum_f + count/2) / count;
+        sum_num = 0; sum_den_f = 0; sum_den_t = 0;
+        for (y = 0; y &lt; tmp_h; y++) {
+            for (x = 0; x &lt; tmp_w; x++) {
+                diff_f = image[(v+y)*img_w + (u+x)] - f_bar;
+                diff_t = templ[y*tmp_w + x]         - template_mean;
+                sum_num   += diff_f*diff_t;
+                sum_den_f += diff_f*diff_f;
+                sum_den_t += diff_t*diff_t;
+            }
+        }
+        if (sum_den_f == 0 or sum_den_t == 0)
+            result = 0;
+        else
+            result = (sum_num*sum_num &lt;&lt; 31) / (sum_den_f*sum_den_t);
+        result_map[v*res_w + u] = result;
+    }
+}</pre>
+
+<p class="noind">Posle transformacije:</p>
 
 <pre>    v = 0
 L4: if (v &gt;= res_h) goto L4_END
@@ -586,8 +607,8 @@ DMA kontroler na <span class="mono">0x6000_0000</span>. Mapa je od početka
 projektovana tako da odgovara rasporedu adresa opšte namene na Zynq platformi, pa se
 može preuzeti neizmenjena pri integraciji u blok dizajn.</p>
 
-<p class="noind">⚠️ <b>Tabela iznad opisuje izvršnu specifikaciju, ne konačnu
-realizaciju.</b> Tri bazne adrese jezgara i DMA kontrolera prenesene su
+<p class="noind">Tabela iznad opisuje izvršnu specifikaciju, ne konačnu
+realizaciju. Tri bazne adrese jezgara i DMA kontrolera prenesene su
 <b>neizmenjene</b> (odeljak 9.2), ali dve stvari se razlikuju, jer je jezgro spakovano kao
 slave sa internim memorijama a ne kao master:</p>
 
@@ -660,7 +681,7 @@ dvoprocesnom stilu: jedan proces sadrži isključivo registre
 logiku, sa podrazumevanim dodelama na početku i grananjem po
 <span class="mono">case state_reg</span>. Memorija integralne slike izdvojena je u
 treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash; svih
-23 &mdash; nabrojana u Tabeli 5 i prikazana na ASMD dijagramu (Slika 1).</p>
+23 &mdash; nabrojana u Tabeli 5 i prikazana na ASMD dijagramu (Slike 1a i 1b).</p>
 
 <table>
   <caption><b>Tabela 5.</b> Svih 23 stanja kontrolne jedinice, grupisano po fazama</caption>
@@ -686,14 +707,12 @@ treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash;
         <td class="c">1</td>
         <td>Akumulira poslednji registrovani par u sve tri sume
         (<span class="mono">sum_num</span>, <span class="mono">sum_den_f</span>,
-        <span class="mono">sum_den_t</span>); poništava <span class="mono">mac_v</span>.
-        Dodato u Koraku 8b uz MAC protočnost.</td></tr>
+        <span class="mono">sum_den_t</span>); poništava <span class="mono">mac_v</span>.</td></tr>
     <tr><td><b>E</b></td><td><span class="mono">S_NCC_SQ</span></td>
         <td class="c">1</td>
         <td>Provera <span class="mono">den = 0</span>; ako nije, registruje
         <span class="mono">num_sq &lt;= sum_num<sup>2</sup></span> i
-        <span class="mono">den_prod &lt;= sum_den_f &middot; sum_den_t</span>. Dodato u Koraku 8b da kvadriranje
-        ne ulazi kombinaciono u 83-bitni delilac.</td></tr>
+        <span class="mono">den_prod &lt;= sum_den_f &middot; sum_den_t</span>.</td></tr>
     <tr><td><b>E</b></td><td><span class="mono">S_NCC_DIV</span>, <span class="mono">S_NCC_WAIT</span>,<br><span class="mono">S_WRITE_RESULT</span></td>
         <td class="c">~84 po prozoru</td>
         <td>Startuje <span class="mono">div_ncc</span> nad registrovanim vrednostima:
@@ -703,246 +722,372 @@ treći, poseban proces. Stanja se prirodno grupišu u pet faza, a sva su &mdash;
   </tbody>
 </table>
 
-<p>Slika 1 prikazuje ASMD dijagram. Pravougaonici su stanja sa pripadajućim RT
-operacijama, rombovi su uslovni blokovi (grananja), a isprekidane linije povratne
-grane petlji.</p>
+<p>Slike 1a i 1b prikazuju ASMD dijagram, u notaciji sa vežbe RT modelovanja (Slika 4.5
+udžbeničkih materijala). Zbog veličine je podeljen na dve slike, a pet grana koje ih povezuju obeleženo je krugovima <b>A</b>&ndash;<b>E</b>. Oblici imaju sledeće značenje:</p>
+
+<ul class="plain">
+  <li><b>isprekidana kontura</b> sa imenom stanja u gornjem levom uglu &mdash; jedan
+      <i>ASMD blok</i>, odnosno jedno stanje kontrolnog automata, odnosno jedan takt;</li>
+  <li><b>pravougaonik</b> (<i>state</i> blok) &mdash; RT operacije koje se u tom stanju
+      izvršavaju <b>bezuslovno</b>;</li>
+  <li><b>šestougao</b> &mdash; <i>kombinaciona odluka</i>; ne uvodi novo stanje, već se
+      izračunava u istom taktu i bira sledeće stanje, sa granama
+      <span class="mono">T</span> i <span class="mono">F</span>;</li>
+  <li><b>zaobljeni pravougaonik</b> (<i>uslovni izlazni</i> blok) &mdash; RT operacije
+      koje se izvršavaju <b>samo na toj grani</b>. Tako se u stanjima čekanja vidi da se
+      registar upisuje tek kad delilac javi da je gotov, a ne u svakom taktu čekanja.</li>
+</ul>
+
+<p class="noind">Svaki ASM blok ima <b>tačno jedan</b> <i>state</i> blok &mdash; on i jeste stanje, i za
+njega se vezuje ime. Test i uslovni izlazni blokovi su opcioni. Pet stanja nema nijednu
+bezuslovnu RT operaciju &mdash; tri koja čekaju delilac
+(<span class="mono">S_CALC_MEAN_WAIT</span>, <span class="mono">S_L_U_WAIT</span>,
+<span class="mono">S_NCC_WAIT</span>), <span class="mono">S_IDLE</span> koje čeka
+<span class="mono">start</span>, i <span class="mono">S_NCC_SQ</span> gde obe grane vode u
+različite uslovne izlazne blokove. Kod njih je <i>state</i> blok <b>prazan</b> (crtica), što
+je tačan iskaz: u tom taktu se ne izvršava nijedna netrivijalna RT operacija bezuslovno.</p>
+
+<p class="noind">Trivijalne RT operacije oblika <span class="mono">registar &larr;
+registar</span>, koje postoje u svakom stanju, se po konvenciji iz vežbe ne crtaju; u
+HDL modelu ih pokrivaju podrazumevane dodele na početku kombinacionog procesa.
+Grupisanje u pet faza (A&ndash;E, Tabela 5, odeljci 5.2&ndash;5.6) je organizaciono, u
+tekstu &mdash; nije deo notacije same slike.</p>
 
 <!-- SVG: ASMD -->
 <figure class="tall">
-<svg viewBox="0 0 660 1180" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+<svg viewBox="0 0 660 1170" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
   <defs>
     <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
       <path d="M0,0 L8,3 L0,6 z" fill="#000"/>
     </marker>
-    <marker id="ahd" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L8,3 L0,6 z" fill="#555"/>
+  </defs>
+  <style>
+    .st { fill:#fff; stroke:#000; stroke-width:1.1; }
+    .gp { fill:none; stroke:#000; stroke-width:1; stroke-dasharray:4 3; }
+    .nm { font-size:9px; }
+    .op { font-size:8.6px; fill:#000; }
+    .lb { font-size:9px; fill:#000; }
+    .ln { stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+    .lnd{ stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+  </style>
+
+  <!-- RESET -->
+  <path class="ln" d="M200,8 L200,44"/>
+  <text class="lb" x="194" y="18" text-anchor="end">reset</text>
+
+  <!-- BLOK 1: S_IDLE -->
+  <rect class="gp" x="82" y="32" width="236" height="136"/>
+  <text class="nm" x="86" y="42" text-anchor="start">S_IDLE</text>
+  <rect class="st" x="88" y="44" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="58" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,66 L200,78"/>
+  <path class="st" d="M170,78 L230,78 L250,92 L230,106 L170,106 L150,92 z"/>
+  <text class="lb" x="200" y="95" text-anchor="middle">start = 1</text>
+  <path class="lnd" d="M250,92 L340,92 L340,38 L206,38"/>
+  <text class="lb" x="338" y="88" text-anchor="end">F</text>
+  <path class="ln" d="M200,106 L200,118"/>
+  <text class="lb" x="236" y="115" text-anchor="start">T</text>
+  <rect class="st" x="88" y="118" width="224" height="44" rx="15"/>
+  <text class="op" x="200" y="129" text-anchor="middle" font-size="7.4">img_w, img_h, tmp_w, tmp_h &lt;= ulazni portovi<tspan x="200" dy="9.4">res_w &lt;= img_w &minus; tmp_w + 1</tspan><tspan x="200" dy="9.4">res_h &lt;= img_h &minus; tmp_h + 1</tspan><tspan x="200" dy="9.4">y, x &lt;= 0 ; row_sum &lt;= 0 ; busy &lt;= 1</tspan></text>
+  <path class="ln" d="M200,162 L200,182"/>
+
+  <!-- BLOK 2: S_LOAD_IMG_ADDR -->
+  <rect class="gp" x="82" y="170" width="236" height="48"/>
+  <rect class="st" x="88" y="182" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="180" text-anchor="start">S_LOAD_IMG_ADDR</text>
+  <text class="op" x="200" y="195" text-anchor="middle" font-size="8.2">img_addr_o &lt;= y&middot;img_w + x<tspan x="200" dy="10.2">sat_rd_addr &lt;= y&middot;SAT_W + (x+1)</tspan></text>
+  <path class="ln" d="M200,212 L200,232"/>
+
+  <!-- BLOK 3: S_LOAD_IMG_DATA -->
+  <rect class="gp" x="82" y="220" width="236" height="90"/>
+  <rect class="st" x="88" y="232" width="224" height="32" rx="0"/>
+  <text class="nm" x="86" y="230" text-anchor="start">S_LOAD_IMG_DATA</text>
+  <text class="op" x="200" y="242" text-anchor="middle" font-size="7.0">x = 0 :  row_sum &lt;= img_data_i<tspan x="200" dy="9.0">x &gt; 0 :  row_sum &lt;= row_sum + img_data_i</tspan><tspan x="200" dy="9.0">SAT[y+1][x+1] &lt;= SAT[y][x+1] + row_sum</tspan></text>
+  <path class="ln" d="M200,264 L200,276"/>
+  <path class="st" d="M170,276 L230,276 L250,290 L230,304 L170,304 L150,290 z"/>
+  <text class="lb" x="200" y="289" text-anchor="middle">x+1 &lt; img_w<tspan x="200" dy="9">or y+1 &lt; img_h</tspan></text>
+  <path class="lnd" d="M250,290 L350,290 L350,197 L312,197"/>
+  <text class="lb" x="348" y="283" text-anchor="end">T</text>
+  <path class="ln" d="M200,304 L200,324"/>
+  <text class="lb" x="236" y="308" text-anchor="start">F</text>
+
+  <!-- BLOK 4: S_LOAD_TMPL_ADDR -->
+  <rect class="gp" x="82" y="312" width="236" height="48"/>
+  <rect class="st" x="88" y="324" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="322" text-anchor="start">S_LOAD_TMPL_ADDR</text>
+  <text class="op" x="200" y="342" text-anchor="middle">templ_addr_o &lt;= p</text>
+  <path class="ln" d="M200,354 L200,374"/>
+
+  <!-- BLOK 5: S_LOAD_TMPL_DATA -->
+  <rect class="gp" x="82" y="362" width="236" height="90"/>
+  <rect class="st" x="88" y="374" width="224" height="32" rx="0"/>
+  <text class="nm" x="86" y="372" text-anchor="start">S_LOAD_TMPL_DATA</text>
+  <text class="op" x="200" y="393" text-anchor="middle">sum_t &lt;= sum_t + templ_data_i</text>
+  <path class="ln" d="M200,406 L200,418"/>
+  <path class="st" d="M170,418 L230,418 L250,432 L230,446 L170,446 L150,432 z"/>
+  <text class="lb" x="200" y="435" text-anchor="middle">p+1 &lt; N<tspan font-size="7">t</tspan></text>
+  <path class="lnd" d="M250,432 L350,432 L350,339 L312,339"/>
+  <text class="lb" x="348" y="425" text-anchor="end">T</text>
+  <path class="ln" d="M200,446 L200,466"/>
+  <text class="lb" x="236" y="450" text-anchor="start">F</text>
+
+  <!-- BLOK 6: S_CALC_MEAN -->
+  <rect class="gp" x="82" y="454" width="236" height="48"/>
+  <rect class="st" x="88" y="466" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="464" text-anchor="start">S_CALC_MEAN</text>
+  <text class="op" x="200" y="479" text-anchor="middle" font-size="7.8">dm_dividend &lt;= sum_t + N/2 ; dm_divisor &lt;= N<tspan x="200" dy="9.8">dm_start &lt;= 1</tspan></text>
+  <path class="ln" d="M200,496 L200,516"/>
+
+  <!-- BLOK 7: S_CALC_MEAN_WAIT -->
+  <rect class="gp" x="82" y="504" width="236" height="124"/>
+  <text class="nm" x="86" y="514" text-anchor="start">S_CALC_MEAN_WAIT</text>
+  <rect class="st" x="88" y="516" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="530" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,538 L200,550"/>
+  <path class="st" d="M170,550 L230,550 L250,564 L230,578 L170,578 L150,564 z"/>
+  <text class="lb" x="200" y="567" text-anchor="middle">dm_done = 1</text>
+  <path class="lnd" d="M250,564 L344,564 L344,510 L206,510"/>
+  <text class="lb" x="342" y="560" text-anchor="end">F</text>
+  <path class="ln" d="M200,578 L200,590"/>
+  <text class="lb" x="236" y="587" text-anchor="start">T</text>
+  <rect class="st" x="88" y="590" width="224" height="32" rx="16"/>
+  <text class="op" x="200" y="609" text-anchor="middle">template_mean &lt;= dm_quot ; v &lt;= 0</text>
+  <path class="ln" d="M200,622 L200,642"/>
+
+  <!-- BLOK 8: S_L_V -->
+  <rect class="gp" x="82" y="630" width="236" height="124"/>
+  <rect class="st" x="88" y="642" width="224" height="28" rx="0"/>
+  <text class="nm" x="86" y="640" text-anchor="start">S_L_V</text>
+  <text class="op" x="200" y="659" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,670 L200,682"/>
+  <path class="st" d="M170,682 L230,682 L250,696 L230,710 L170,710 L150,696 z"/>
+  <text class="lb" x="200" y="699" text-anchor="middle">v &lt; res_h</text>
+  <path class="lnd" d="M250,696 L490,696 L490,1131"/>
+  <text class="lb" x="360" y="691" text-anchor="middle">F (v &ge; res_h)</text>
+  <path class="ln" d="M200,710 L200,722"/>
+  <text class="lb" x="236" y="719" text-anchor="start">T</text>
+  <rect class="st" x="88" y="722" width="224" height="26" rx="13"/>
+  <text class="op" x="200" y="739" text-anchor="middle">u &lt;= 0</text>
+  <path class="ln" d="M200,748 L200,768"/>
+
+  <!-- BLOK 9: S_L_U_A -->
+  <rect class="gp" x="82" y="756" width="236" height="44"/>
+  <rect class="st" x="88" y="768" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="766" text-anchor="start">S_L_U_A</text>
+  <text class="op" x="200" y="784" text-anchor="middle" font-size="7.8">sat_rd_addr &lt;= (v+tmp_h)&middot;SAT_W + (u+tmp_w)</text>
+  <path class="ln" d="M200,794 L200,814"/>
+
+  <!-- BLOK 10: S_L_U_B -->
+  <rect class="gp" x="82" y="802" width="236" height="44"/>
+  <rect class="st" x="88" y="814" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="812" text-anchor="start">S_L_U_B</text>
+  <text class="op" x="200" y="825" text-anchor="middle" font-size="7.4">sum_f_partial &lt;= sat_rd_data<tspan x="200" dy="9.4">sat_rd_addr &lt;= v&middot;SAT_W + (u+tmp_w)</tspan></text>
+  <path class="ln" d="M200,840 L200,860"/>
+
+  <!-- BLOK 11: S_L_U_C -->
+  <rect class="gp" x="82" y="848" width="236" height="44"/>
+  <rect class="st" x="88" y="860" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="858" text-anchor="start">S_L_U_C</text>
+  <text class="op" x="200" y="871" text-anchor="middle" font-size="7.4">sum_f_partial &lt;= sum_f_partial &minus; sat_rd_data<tspan x="200" dy="9.4">sat_rd_addr &lt;= (v+tmp_h)&middot;SAT_W + u</tspan></text>
+  <path class="ln" d="M200,886 L200,906"/>
+
+  <!-- BLOK 12: S_L_U_D -->
+  <rect class="gp" x="82" y="894" width="236" height="44"/>
+  <rect class="st" x="88" y="906" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="904" text-anchor="start">S_L_U_D</text>
+  <text class="op" x="200" y="917" text-anchor="middle" font-size="7.4">sum_f_partial &lt;= sum_f_partial &minus; sat_rd_data<tspan x="200" dy="9.4">sat_rd_addr &lt;= v&middot;SAT_W + u</tspan></text>
+  <path class="ln" d="M200,932 L200,952"/>
+
+  <!-- BLOK 13: S_L_U_E -->
+  <rect class="gp" x="82" y="940" width="236" height="54"/>
+  <rect class="st" x="88" y="952" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="950" text-anchor="start">S_L_U_E</text>
+  <text class="op" x="200" y="964" text-anchor="middle" font-size="7.4">dm_dividend &lt;= sum_f_partial + sat_rd_data + N/2<tspan x="200" dy="9.4">dm_divisor &lt;= N ; dm_start &lt;= 1</tspan><tspan x="200" dy="9.4">sum_num, sum_den_f, sum_den_t &lt;= 0 ; y, x &lt;= 0</tspan></text>
+  <path class="ln" d="M200,988 L200,1008"/>
+
+  <!-- BLOK 14: S_L_U_WAIT -->
+  <rect class="gp" x="82" y="996" width="236" height="124"/>
+  <text class="nm" x="86" y="1006" text-anchor="start">S_L_U_WAIT</text>
+  <rect class="st" x="88" y="1008" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="1022" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,1030 L200,1042"/>
+  <path class="st" d="M170,1042 L230,1042 L250,1056 L230,1070 L170,1070 L150,1056 z"/>
+  <text class="lb" x="200" y="1059" text-anchor="middle">dm_done = 1</text>
+  <path class="lnd" d="M250,1056 L344,1056 L344,1002 L206,1002"/>
+  <text class="lb" x="342" y="1052" text-anchor="end">F</text>
+  <path class="ln" d="M200,1070 L200,1082"/>
+  <text class="lb" x="236" y="1079" text-anchor="start">T</text>
+  <rect class="st" x="88" y="1082" width="224" height="32" rx="16"/>
+  <text class="op" x="200" y="1101" text-anchor="middle">f_bar &lt;= dm_quot</text>
+  <path class="ln" d="M200,1114 L200,1131"/>
+
+  <circle cx="200" cy="1140" r="9" class="st"/>
+  <text class="nm" x="200" y="1143" text-anchor="middle">A</text>
+  <circle cx="490" cy="1140" r="9" class="st"/>
+  <text class="nm" x="490" y="1143" text-anchor="middle">B</text>
+  <circle cx="600" cy="30" r="9" class="st"/>
+  <text class="nm" x="600" y="33" text-anchor="middle">C</text>
+  <circle cx="30" cy="781" r="9" class="st"/>
+  <text class="nm" x="30" y="784" text-anchor="middle">D</text>
+  <circle cx="30" cy="656" r="9" class="st"/>
+  <text class="nm" x="30" y="659" text-anchor="middle">E</text>
+  <path class="lnd" d="M591,30 L206,30"/>
+  <path class="lnd" d="M39,781 L88,781"/>
+  <path class="lnd" d="M39,656 L88,656"/>
+</svg>
+<figcaption><b>Slika 1a.</b> ASMD dijagram, prvi deo &mdash; stanja <span class="mono">S_IDLE</span> do <span class="mono">S_L_U_WAIT</span> (učitavanje segmenta i šablona, priprema prozora). Krugovi <b>A</b>&ndash;<b>E</b> su veze sa Slikom 1b: <b>A</b> nastavak toka, <b>B</b> kraj obrade, <b>C</b> povratak u <span class="mono">S_IDLE</span>, <b>D</b> naredni prozor u redu, <b>E</b> novi red prozora.</figcaption>
+</figure>
+
+<figure class="tall">
+<svg viewBox="0 0 660 970" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#000"/>
     </marker>
   </defs>
   <style>
-    .st { fill:#fff; stroke:#000; stroke-width:1.2; }
-    .ph { fill:#f2f2ef; stroke:#bbb; stroke-width:1; stroke-dasharray:4 3; }
-    .nm { font-size:11px; font-weight:bold; }
-    .op { font-size:8.6px; fill:#333; font-family:Consolas,monospace; }
+    .st { fill:#fff; stroke:#000; stroke-width:1.1; }
+    .gp { fill:none; stroke:#000; stroke-width:1; stroke-dasharray:4 3; }
+    .nm { font-size:9px; }
+    .op { font-size:8.6px; fill:#000; }
     .lb { font-size:9px; fill:#000; }
-    .pl { font-size:10px; fill:#777; font-weight:bold; letter-spacing:.08em; }
-    .ln { stroke:#000; stroke-width:1.2; fill:none; marker-end:url(#ah); }
-    .lnd{ stroke:#555; stroke-width:1.1; fill:none; stroke-dasharray:5 3; marker-end:url(#ahd); }
+    .ln { stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+    .lnd{ stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
   </style>
 
-  <!-- faza pozadine -->
-  <rect class="ph" x="72" y="114" width="304" height="88"  rx="5"/>
-  <text class="pl" transform="translate(80,158) rotate(-90)" text-anchor="middle">FAZA A</text>
-  <rect class="ph" x="72" y="202" width="304" height="200" rx="5"/>
-  <text class="pl" transform="translate(80,302) rotate(-90)" text-anchor="middle">FAZA B</text>
-  <rect class="ph" x="72" y="402" width="304" height="322" rx="5"/>
-  <text class="pl" transform="translate(80,563) rotate(-90)" text-anchor="middle">FAZA C</text>
-  <rect class="ph" x="72" y="726" width="304" height="158" rx="5"/>
-  <text class="pl" transform="translate(80,805) rotate(-90)" text-anchor="middle">FAZA D</text>
-  <rect class="ph" x="72" y="886" width="304" height="240" rx="5"/>
-  <text class="pl" transform="translate(80,1006) rotate(-90)" text-anchor="middle">FAZA E</text>
+  <path class="ln" d="M200,23 L200,44"/>
+  <circle cx="200" cy="14" r="9" class="st"/>
+  <text class="nm" x="200" y="17" text-anchor="middle">A</text>
+  <circle cx="490" cy="806" r="9" class="st"/>
+  <text class="nm" x="490" y="809" text-anchor="middle">B</text>
+  <circle cx="600" cy="871" r="9" class="st"/>
+  <text class="nm" x="600" y="874" text-anchor="middle">C</text>
+  <circle cx="30" cy="910" r="9" class="st"/>
+  <text class="nm" x="30" y="913" text-anchor="middle">D</text>
+  <circle cx="30" cy="937" r="9" class="st"/>
+  <text class="nm" x="30" y="940" text-anchor="middle">E</text>
+  <!-- BLOK 15: S_L_YX_FILL -->
+  <rect class="gp" x="82" y="32" width="236" height="88"/>
+  <rect class="st" x="88" y="44" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="42" text-anchor="start">S_L_YX_FILL</text>
+  <text class="op" x="200" y="57" text-anchor="middle" font-size="7.8">img_addr_o &lt;= v&middot;img_w + u ; templ_addr_o &lt;= 0<tspan x="200" dy="9.8">mac_v &lt;= 0</tspan></text>
+  <path class="ln" d="M200,74 L200,86"/>
+  <path class="st" d="M170,86 L230,86 L250,100 L230,114 L170,114 L150,100 z"/>
+  <text class="lb" x="200" y="103" text-anchor="middle" font-size="7.6">tmp_w = tmp_h = 1</text>
+  <path class="lnd" d="M150,100 L70,100 L70,366 L88,366"/>
+  <text class="lb" x="146" y="94" text-anchor="end">T</text>
+  <path class="ln" d="M200,114 L200,134"/>
+  <text class="lb" x="236" y="118" text-anchor="start">F</text>
 
-  <!-- RESET -->
-  <ellipse cx="200" cy="22" rx="30" ry="13" class="st"/>
-  <text class="nm" x="200" y="26" text-anchor="middle">reset</text>
-  <path class="ln" d="M200,35 L200,44"/>
+  <!-- BLOK 16: S_L_YX_RUN -->
+  <rect class="gp" x="82" y="122" width="236" height="212"/>
+  <rect class="st" x="88" y="134" width="224" height="54" rx="0"/>
+  <text class="nm" x="86" y="132" text-anchor="start">S_L_YX_RUN</text>
+  <text class="op" x="200" y="145" text-anchor="middle" font-size="7.4">df &lt;= img_data_i &minus; f_bar<tspan x="200" dy="9.4">dt &lt;= templ_data_i &minus; template_mean</tspan><tspan x="200" dy="9.4">mac_v &lt;= 1</tspan><tspan x="200" dy="9.4">img_addr_o &lt;= (v+y)&middot;img_w + (u+x)</tspan><tspan x="200" dy="9.4">templ_addr_o &lt;= y&middot;tmp_w + x</tspan></text>
+  <path class="ln" d="M200,188 L200,200"/>
+  <path class="st" d="M170,200 L230,200 L250,214 L230,228 L170,228 L150,214 z"/>
+  <text class="lb" x="200" y="217" text-anchor="middle">mac_v = 1</text>
+  <path class="lnd" d="M250,214 L336,214 L336,288 L206,288"/>
+  <text class="lb" x="334" y="210" text-anchor="end">F</text>
+  <path class="ln" d="M200,228 L200,240"/>
+  <text class="lb" x="236" y="237" text-anchor="start">T</text>
+  <rect class="st" x="88" y="240" width="224" height="36" rx="18"/>
+  <text class="op" x="200" y="252" text-anchor="middle" font-size="7.4">sum_num &lt;= sum_num + df&middot;dt<tspan x="200" dy="9.4">sum_den_f &lt;= sum_den_f + df&sup2;</tspan><tspan x="200" dy="9.4">sum_den_t &lt;= sum_den_t + dt&sup2;</tspan></text>
+  <path class="ln" d="M200,276 L200,300"/>
+  <path class="st" d="M170,300 L230,300 L250,314 L230,328 L170,328 L150,314 z"/>
+  <text class="lb" x="200" y="317" text-anchor="middle">nije kraj</text>
+  <path class="lnd" d="M250,314 L350,314 L350,161 L312,161"/>
+  <text class="lb" x="348" y="308" text-anchor="end">T</text>
+  <path class="ln" d="M200,328 L200,348"/>
+  <text class="lb" x="236" y="332" text-anchor="start">F</text>
 
-  <!-- 1 S_IDLE -->
-  <rect class="st" x="88" y="44" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="59" text-anchor="middle">S_IDLE</text>
-  <text class="op" x="200" y="70" text-anchor="middle">busy&lt;=0 ; res &lt;= img&minus;tmp+1</text>
-  <path class="ln" d="M200,74 L200,82"/>
+  <!-- BLOK 17: S_L_YX_DRAIN -->
+  <rect class="gp" x="82" y="336" width="236" height="142"/>
+  <rect class="st" x="88" y="348" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="346" text-anchor="start">S_L_YX_DRAIN</text>
+  <text class="op" x="200" y="360" text-anchor="middle" font-size="7.4">df &lt;= img_data_i &minus; f_bar<tspan x="200" dy="9.4">dt &lt;= templ_data_i &minus; template_mean</tspan><tspan x="200" dy="9.4">mac_v &lt;= 1</tspan></text>
+  <path class="ln" d="M200,384 L200,396"/>
+  <path class="st" d="M170,396 L230,396 L250,410 L230,424 L170,424 L150,410 z"/>
+  <text class="lb" x="200" y="413" text-anchor="middle">mac_v = 1</text>
+  <path class="lnd" d="M250,410 L336,410 L336,484 L206,484"/>
+  <text class="lb" x="334" y="406" text-anchor="end">F</text>
+  <path class="ln" d="M200,424 L200,436"/>
+  <text class="lb" x="236" y="433" text-anchor="start">T</text>
+  <rect class="st" x="88" y="436" width="224" height="36" rx="18"/>
+  <text class="op" x="200" y="448" text-anchor="middle" font-size="7.4">sum_num &lt;= sum_num + df&middot;dt<tspan x="200" dy="9.4">sum_den_f &lt;= sum_den_f + df&sup2;</tspan><tspan x="200" dy="9.4">sum_den_t &lt;= sum_den_t + dt&sup2;</tspan></text>
+  <path class="ln" d="M200,472 L200,492"/>
 
-  <!-- D1 start? -->
-  <path class="st" d="M200,82 L250,96 L200,110 L150,96 z"/>
-  <text class="lb" x="200" y="99" text-anchor="middle">start = 1 ?</text>
-  <path class="lnd" d="M250,96 L300,96 L300,40 L200,40 L200,44"/>
-  <text class="lb" x="305" y="93">ne</text>
-  <path class="ln" d="M200,110 L200,122"/>
+  <!-- BLOK 18: S_L_YX_DRAIN2 -->
+  <rect class="gp" x="82" y="480" width="236" height="54"/>
+  <rect class="st" x="88" y="492" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="490" text-anchor="start">S_L_YX_DRAIN2</text>
+  <text class="op" x="200" y="504" text-anchor="middle" font-size="7.4">sum_num &lt;= sum_num + df&middot;dt ; mac_v &lt;= 0<tspan x="200" dy="9.4">sum_den_f &lt;= sum_den_f + df&sup2;</tspan><tspan x="200" dy="9.4">sum_den_t &lt;= sum_den_t + dt&sup2;</tspan></text>
+  <path class="ln" d="M200,528 L200,548"/>
 
-  <!-- 2 S_LOAD_IMG_ADDR -->
-  <rect class="st" x="88" y="122" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="137" text-anchor="middle">S_LOAD_IMG_ADDR</text>
-  <text class="op" x="200" y="148" text-anchor="middle">img_addr_o, sat_rd_addr &lt;= &hellip;</text>
-  <path class="ln" d="M200,152 L200,162"/>
+  <!-- BLOK 19: S_NCC_SQ -->
+  <rect class="gp" x="82" y="536" width="383" height="122"/>
+  <text class="nm" x="86" y="546" text-anchor="start">S_NCC_SQ</text>
+  <rect class="st" x="88" y="548" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="562" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,570 L200,582"/>
+  <path class="st" d="M170,582 L230,582 L250,596 L230,610 L170,610 L150,596 z"/>
+  <text class="lb" x="200" y="595" text-anchor="middle">sum_den_f = 0<tspan x="200" dy="9">or sum_den_t = 0</tspan></text>
+  <path class="ln" d="M250,596 L330,596"/>
+  <text class="lb" x="290" y="590" text-anchor="middle">T</text>
+  <rect class="st" x="330" y="585" width="125" height="22" rx="11"/>
+  <text class="op" x="392" y="600" text-anchor="middle">result_q &lt;= 0</text>
+  <path class="lnd" d="M392,607 L392,828 L330,828 L330,868 L312,868"/>
+  <path class="ln" d="M200,610 L200,622"/>
+  <text class="lb" x="236" y="619" text-anchor="start">F</text>
+  <rect class="st" x="88" y="622" width="224" height="30" rx="15"/>
+  <text class="op" x="200" y="636" text-anchor="middle">num_sq &lt;= sum_num&sup2;<tspan x="200" dy="11">den_prod &lt;= sum_den_f &middot; sum_den_t</tspan></text>
+  <path class="ln" d="M200,652 L200,672"/>
 
-  <!-- 3 S_LOAD_IMG_DATA -->
-  <rect class="st" x="88" y="162" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="176" text-anchor="middle">S_LOAD_IMG_DATA</text>
-  <text class="op" x="200" y="188" text-anchor="middle">SAT[y+1][x+1] &lt;= SAT[y][x+1]+row_sum</text>
-  <path class="lnd" d="M312,180 L350,180 L350,137 L314,137"/>
-  <text class="lb" x="348" y="163" text-anchor="end">x,y &lt; img</text>
-  <path class="ln" d="M200,194 L200,206"/>
+  <!-- BLOK 20: S_NCC_DIV -->
+  <rect class="gp" x="82" y="660" width="236" height="54"/>
+  <rect class="st" x="88" y="672" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="670" text-anchor="start">S_NCC_DIV</text>
+  <text class="op" x="200" y="683" text-anchor="middle" font-size="7.6">dn_dividend &lt;= num_sq &lt;&lt; 31<tspan x="200" dy="9.6">dn_divisor &lt;= den_prod</tspan><tspan x="200" dy="9.6">dn_start &lt;= 1</tspan></text>
+  <path class="ln" d="M200,708 L200,728"/>
 
-  <!-- 4 S_LOAD_TMPL_ADDR -->
-  <rect class="st" x="88" y="206" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="221" text-anchor="middle">S_LOAD_TMPL_ADDR</text>
-  <text class="op" x="200" y="232" text-anchor="middle">templ_addr_o &lt;= p</text>
-  <path class="ln" d="M200,236 L200,246"/>
+  <!-- BLOK 21: S_NCC_WAIT -->
+  <rect class="gp" x="82" y="716" width="236" height="122"/>
+  <text class="nm" x="86" y="726" text-anchor="start">S_NCC_WAIT</text>
+  <rect class="st" x="88" y="728" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="742" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,750 L200,762"/>
+  <path class="st" d="M170,762 L230,762 L250,776 L230,790 L170,790 L150,776 z"/>
+  <text class="lb" x="200" y="779" text-anchor="middle">dn_done = 1</text>
+  <path class="lnd" d="M250,776 L344,776 L344,722 L206,722"/>
+  <text class="lb" x="342" y="772" text-anchor="end">F</text>
+  <path class="ln" d="M200,790 L200,802"/>
+  <text class="lb" x="236" y="799" text-anchor="start">T</text>
+  <rect class="st" x="88" y="802" width="224" height="30" rx="15"/>
+  <text class="op" x="200" y="820" text-anchor="middle">result_q &lt;= dn_quot</text>
+  <path class="ln" d="M200,832 L200,852"/>
 
-  <!-- 5 S_LOAD_TMPL_DATA -->
-  <rect class="st" x="88" y="246" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="260" text-anchor="middle">S_LOAD_TMPL_DATA</text>
-  <text class="op" x="200" y="272" text-anchor="middle">sum_t &lt;= sum_t + templ_data_i</text>
-  <path class="lnd" d="M312,264 L350,264 L350,221 L314,221"/>
-  <text class="lb" x="348" y="247" text-anchor="end">p &lt; N<tspan font-size="7">t</tspan></text>
-  <path class="ln" d="M200,278 L200,290"/>
+  <!-- BLOK 22: S_WRITE_RESULT -->
+  <rect class="gp" x="82" y="840" width="236" height="90"/>
+  <rect class="st" x="88" y="852" width="224" height="32" rx="0"/>
+  <text class="nm" x="86" y="850" text-anchor="start">S_WRITE_RESULT</text>
+  <text class="op" x="200" y="871" text-anchor="middle">result_map[v&middot;res_w+u] &lt;= result_q</text>
+  <path class="ln" d="M200,884 L200,896"/>
+  <path class="st" d="M170,896 L230,896 L250,910 L230,924 L170,924 L150,910 z"/>
+  <text class="lb" x="200" y="913" text-anchor="middle">u+1 &lt; res_w</text>
+  <path class="lnd" d="M150,910 L39,910"/>
+  <text class="lb" x="54" y="226" text-anchor="end">T</text>
+  <path class="lnd" d="M200,924 L200,937 L39,937"/>
+  <text class="lb" x="120" y="948" text-anchor="middle">F (novi red, v++)</text>
 
-  <!-- 6 S_CALC_MEAN -->
-  <rect class="st" x="88" y="290" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="305" text-anchor="middle">S_CALC_MEAN</text>
-  <text class="op" x="200" y="316" text-anchor="middle">div_mean start: (sum_t+N/2)/N</text>
-  <path class="ln" d="M200,320 L200,328"/>
-
-  <!-- 7 S_CALC_MEAN_WAIT -->
-  <rect class="st" x="88" y="328" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="342" text-anchor="middle">S_CALC_MEAN_WAIT</text>
-  <text class="op" x="200" y="354" text-anchor="middle">template_mean &lt;= quotient</text>
-  <path class="ln" d="M200,360 L200,368"/>
-
-  <!-- D2 gotovo? -->
-  <path class="st" d="M200,368 L248,382 L200,396 L152,382 z"/>
-  <text class="lb" x="200" y="385" text-anchor="middle">gotovo ?</text>
-  <path class="lnd" d="M248,382 L344,382 L344,344 L314,344"/>
-  <text class="lb" x="342" y="368" text-anchor="end">ne</text>
-  <path class="ln" d="M200,396 L200,406"/>
-
-  <!-- 8 S_L_V -->
-  <rect class="st" x="88" y="406" width="224" height="28" rx="4"/>
-  <text class="nm" x="200" y="420" text-anchor="middle">S_L_V</text>
-  <text class="op" x="200" y="430" text-anchor="middle">početak reda prozora (v)</text>
-  <path class="ln" d="M200,434 L200,440"/>
-
-  <!-- D3 v<res_h? -->
-  <path class="st" d="M200,440 L252,455 L200,470 L148,455 z"/>
-  <text class="lb" x="200" y="458" text-anchor="middle">v &lt; res_h ?</text>
-  <path class="lnd" d="M252,455 L416,455 L416,1139 L360,1139"/>
-  <text class="lb" x="300" y="450">ne (v &ge; res_h)</text>
-  <path class="ln" d="M200,470 L200,482"/>
-  <text class="lb" x="216" y="480">da</text>
-
-  <!-- 9 S_L_U_A -->
-  <rect class="st" x="88" y="482" width="224" height="26" rx="4"/>
-  <text class="nm" x="200" y="496" text-anchor="middle">S_L_U_A</text>
-  <text class="op" x="200" y="505" text-anchor="middle">SAT čitanje 1 (+A)</text>
-  <path class="ln" d="M200,508 L200,515"/>
-
-  <!-- 10 S_L_U_B -->
-  <rect class="st" x="88" y="515" width="224" height="26" rx="4"/>
-  <text class="nm" x="200" y="529" text-anchor="middle">S_L_U_B</text>
-  <text class="op" x="200" y="538" text-anchor="middle">SAT čitanje 2 (&minus;B)</text>
-  <path class="ln" d="M200,541 L200,548"/>
-
-  <!-- 11 S_L_U_C -->
-  <rect class="st" x="88" y="548" width="224" height="26" rx="4"/>
-  <text class="nm" x="200" y="562" text-anchor="middle">S_L_U_C</text>
-  <text class="op" x="200" y="571" text-anchor="middle">SAT čitanje 3 (&minus;C)</text>
-  <path class="ln" d="M200,574 L200,581"/>
-
-  <!-- 12 S_L_U_D -->
-  <rect class="st" x="88" y="581" width="224" height="26" rx="4"/>
-  <text class="nm" x="200" y="595" text-anchor="middle">S_L_U_D</text>
-  <text class="op" x="200" y="604" text-anchor="middle">SAT čitanje 4 (+D)</text>
-  <path class="ln" d="M200,607 L200,614"/>
-
-  <!-- 13 S_L_U_E -->
-  <rect class="st" x="88" y="614" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="628" text-anchor="middle">S_L_U_E</text>
-  <text class="op" x="200" y="639" text-anchor="middle">sum_f_partial &lt;= +A&minus;B&minus;C+D</text>
-  <path class="ln" d="M200,644 L200,651"/>
-
-  <!-- 14 S_L_U_WAIT -->
-  <rect class="st" x="88" y="651" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="665" text-anchor="middle">S_L_U_WAIT</text>
-  <text class="op" x="200" y="677" text-anchor="middle">div_mean: (sum_f+N/2)/N &rarr; f_bar</text>
-  <path class="ln" d="M200,683 L200,691"/>
-
-  <!-- D4 gotovo? -->
-  <path class="st" d="M200,691 L248,705 L200,719 L152,705 z"/>
-  <text class="lb" x="200" y="708" text-anchor="middle">gotovo ?</text>
-  <path class="lnd" d="M248,705 L344,705 L344,667 L314,667"/>
-  <text class="lb" x="342" y="691" text-anchor="end">ne</text>
-  <path class="ln" d="M200,719 L200,730"/>
-
-  <!-- 15 S_L_YX_FILL -->
-  <rect class="st" x="88" y="730" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="744" text-anchor="middle">S_L_YX_FILL</text>
-  <text class="op" x="200" y="755" text-anchor="middle">izdaj adresu piksela 0 (punjenje)</text>
-  <path class="ln" d="M200,760 L200,770"/>
-
-  <!-- 16 S_L_YX_RUN -->
-  <rect class="st" x="88" y="770" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="784" text-anchor="middle">S_L_YX_RUN</text>
-  <text class="op" x="200" y="796" text-anchor="middle">acc += df·dt, df², dt² ; izdaj N+1</text>
-  <path class="lnd" d="M312,786 L348,786 L348,774 L314,774"/>
-  <text class="lb" x="346" y="801" text-anchor="end">nije kraj</text>
-  <path class="ln" d="M200,802 L200,810"/>
-
-  <!-- 17 S_L_YX_DRAIN -->
-  <rect class="st" x="88" y="810" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="824" text-anchor="middle">S_L_YX_DRAIN</text>
-  <text class="op" x="200" y="835" text-anchor="middle">df,dt &lt;= poslednji ; acc += df_reg&middot;dt_reg</text>
-  <path class="ln" d="M200,840 L200,850"/>
-
-  <!-- 18 S_L_YX_DRAIN2 (novo, Korak 8b) -->
-  <rect class="st" x="88" y="850" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="864" text-anchor="middle">S_L_YX_DRAIN2</text>
-  <text class="op" x="200" y="875" text-anchor="middle">acc += df_reg&middot;dt_reg (poslednji) ; mac_v&lt;=0</text>
-  <path class="ln" d="M200,880 L200,892"/>
-
-  <!-- 19 S_NCC_SQ (novo, Korak 8b) -->
-  <rect class="st" x="88" y="892" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="906" text-anchor="middle">S_NCC_SQ</text>
-  <text class="op" x="200" y="917" text-anchor="middle">num_sq&lt;=sum_num&sup2; ; den_prod&lt;=sum_den_f&middot;sum_den_t</text>
-  <path class="ln" d="M200,922 L200,930"/>
-
-  <!-- D5 den=0? -->
-  <path class="st" d="M200,930 L258,945 L200,960 L142,945 z"/>
-  <text class="lb" x="200" y="948" text-anchor="middle">den = 0 ?</text>
-  <path class="lnd" d="M258,945 L398,945 L398,1103 L314,1103"/>
-  <text class="lb" x="300" y="940">da &rarr; result 0</text>
-  <path class="ln" d="M200,960 L200,971"/>
-  <text class="lb" x="206" y="970">ne</text>
-
-  <!-- 20 S_NCC_DIV -->
-  <rect class="st" x="88" y="971" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="985" text-anchor="middle">S_NCC_DIV</text>
-  <text class="op" x="200" y="996" text-anchor="middle">div_ncc start: (num_sq&lt;&lt;31)/den_prod</text>
-  <path class="ln" d="M200,1001 L200,1011"/>
-
-  <!-- 21 S_NCC_WAIT -->
-  <rect class="st" x="88" y="1011" width="224" height="30" rx="4"/>
-  <text class="nm" x="200" y="1025" text-anchor="middle">S_NCC_WAIT</text>
-  <text class="op" x="200" y="1036" text-anchor="middle">čekaj dn_done ; result_q &lt;= dn_quot</text>
-  <path class="ln" d="M200,1041 L200,1048"/>
-
-  <!-- D6 gotovo? -->
-  <path class="st" d="M200,1048 L248,1062 L200,1076 L152,1062 z"/>
-  <text class="lb" x="200" y="1065" text-anchor="middle">gotovo ?</text>
-  <path class="lnd" d="M248,1062 L344,1062 L344,1026 L314,1026"/>
-  <text class="lb" x="342" y="1048" text-anchor="end">ne</text>
-  <path class="ln" d="M200,1076 L200,1087"/>
-
-  <!-- 22 S_WRITE_RESULT -->
-  <rect class="st" x="88" y="1087" width="224" height="32" rx="4"/>
-  <text class="nm" x="200" y="1101" text-anchor="middle">S_WRITE_RESULT</text>
-  <text class="op" x="200" y="1113" text-anchor="middle">result_map[v&middot;res_w+u] &lt;= result_q</text>
-  <path class="ln" d="M200,1119 L200,1125"/>
-
-  <!-- D7 u+1<res_w? -->
-  <path class="st" d="M200,1125 L268,1140 L200,1155 L132,1140 z"/>
-  <text class="lb" x="200" y="1143" text-anchor="middle">u+1 &lt; res_w ?</text>
-  <path class="lnd" d="M132,1140 L58,1140 L58,495 L88,495"/>
-  <text class="lb" x="54" y="770" text-anchor="end">da</text>
-  <path class="lnd" d="M200,1155 L200,1168 L44,1168 L44,420 L88,420"/>
-  <text class="lb" x="150" y="1165">ne (novi red, v++)</text>
-
-  <!-- 23 S_DONE -->
-  <rect class="st" x="360" y="1124" width="140" height="30" rx="4"/>
-  <text class="nm" x="430" y="1139" text-anchor="middle">S_DONE</text>
-  <text class="op" x="430" y="1150" text-anchor="middle">busy&lt;=0 ; done&lt;=1</text>
-  <path class="ln" d="M500,1139 L540,1139 L540,30 L200,30 L200,44"/>
+  <!-- BLOK 23: S_DONE (dostiže se iz D3, ne(v&ge;res_h)) -->
+  <rect class="gp" x="354" y="844" width="152" height="48"/>
+  <rect class="st" x="360" y="856" width="140" height="30" rx="0"/>
+  <text class="nm" x="358" y="854" text-anchor="start">S_DONE</text>
+  <text class="op" x="430" y="874" text-anchor="middle">busy&lt;=0 ; done&lt;=1</text>
+  <path class="lnd" d="M500,871 L591,871"/>
+  <path class="lnd" d="M490,815 L490,836 L430,836 L430,856"/>
 </svg>
-<figcaption><b>Slika 1.</b> ASMD dijagram kontrolne jedinice NCC jezgra (svih 23 stanja, pet faza)</figcaption>
+<figcaption><b>Slika 1b.</b> ASMD dijagram, drugi deo &mdash; stanja <span class="mono">S_L_YX_FILL</span> do <span class="mono">S_DONE</span> (protočna MAC petlja, deljenje i upis rezultata). Krugovi <b>A</b>&ndash;<b>E</b> odgovaraju istoimenim krugovima na Slici 1a.</figcaption>
 </figure>
 
 <h2>5.2. Faza A: učitavanje slike i izgradnja SAT</h2>
@@ -990,10 +1135,7 @@ registruju razlike <span class="mono">df</span>/<span class="mono">dt</span> pik
 protočnu strukturu (izdaje samo prvu adresu, bez registrovanja i akumulacije), a
 <span class="mono">S_L_YX_DRAIN</span> i <span class="mono">S_L_YX_DRAIN2</span> su
 prazna za izdavanje adrese &mdash; samo dovršavaju registrovanje i akumulaciju piksela
-koji su već učitani. Presek je uveden da bi se putanja BRAM &rarr; oduzimanje &rarr;
-množenje &rarr; akumulator razdvojila na dva takta; sam je doneo <b>2,43 ns</b>
-vremenske rezerve (odeljak 10.5). Cena je i dalje <b>jedan takt po pikselu</b>, uz
-<b>dva</b> takta režije po prozoru umesto jednog. Slika 2 prikazuje preklapanje.</p>
+koji su već učitani. Slika 2 prikazuje preklapanje.</p>
 
 <figure>
 <svg viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
@@ -1159,7 +1301,8 @@ svega nekoliko DSP blokova, kojih ionako ima dovoljno (odeljak 7.2).</p>
 <span class="mono">num_sq_reg</span>, <span class="mono">den_prod_reg</span>) nisu deo
 prvobitnog dizajna &mdash; uvedeni su u Koraku 8b isključivo radi zatvaranja vremenskih
 uslova, bez ikakve promene izlaza. Njihova cena je <b>+0,41 %</b> latencije i
-<b>+110 flip-flopova</b>, a dobitak <b>2,59 ns</b> vremenske rezerve (odeljak 10.5).</p>
+<b>+110 flip-flopova</b>, a dobitak <b>2,59 ns</b> vremenske rezerve &mdash; zbir
+doprinosa protočnog stepena u MAC petlji i registra pred deliocem.</p>
 
 <h2>6.3. Sekvencijalni delilac</h2>
 
@@ -1337,7 +1480,7 @@ generiše impuls <span class="mono">start</span>, zatim čeka signal
   <text class="tb" x="346" y="415">div_ncc</text>
   <text class="sm" x="346" y="426">sekvencijalni, W = 83</text>
   <text class="sm" x="346" y="436">~83 takta / rezultat</text>
-  <path class="w" d="M454,226 L454,378 L400,378 L400,396"/>
+  <path class="w" d="M478,226 L478,378 L400,378 L400,396"/>
   <path class="w" d="M454,340 L454,368 L360,368 L360,396"/>
 
   <rect class="mem" x="278" y="456" width="136" height="32" rx="3"/>
@@ -1382,7 +1525,8 @@ generiše impuls <span class="mono">start</span>, zatim čeka signal
   <path class="c" d="M556,192 L530,192 L530,420 L412,420"/>
   <path class="c" d="M286,420 L268,420 L268,470 L284,470"/>
 </svg>
-<figcaption><b>Slika 3.</b> Blok dijagram datapath-a i controlpath-a NCC jezgra</figcaption>
+<figcaption><b>Slika 3.</b> Blok dijagram datapath-a i controlpath-a NCC jezgra
+(pune linije: tok podataka; isprekidane linije: upravljački i statusni signali)</figcaption>
 </figure>
 
 <p>Podela je klasična: controlpath je isključivo mašina stanja sa brojačima, koja
@@ -1395,7 +1539,7 @@ izvršavanja.</p>
 Koraka 8b (<span class="mono">df_reg</span>/<span class="mono">dt_reg</span>/<span class="mono">mac_v_reg</span>
 između oduzimača i množača, <span class="mono">num_sq_reg</span>/<span class="mono">den_prod_reg</span>
 između kvadriranja i delioca) &mdash; oni takt-granicu unose unutar prikazanih putanja, bez
-promene redosleda blokova ni toka podataka (Tabela 6, §6.2).</p>
+promene redosleda blokova ni toka podataka.</p>
 
 <!-- ============================ 7. SINTEZA ============================ -->
 <h1>7. Analiza posle sinteze i implementacije</h1>
@@ -1412,9 +1556,11 @@ simulacijom u alatu XSim, brojanjem taktova u kojima je signal
 <span class="mono">busy</span> aktivan.</p>
 
 <p class="noind">Ograničenje takta se čita pre sinteze, jer bi se inače jezgro
-sintetisalo bez vremenskog cilja. Režim <span class="mono">out-of-context</span> je
-nužan zato što golo jezgro ima 118 portova, a paket
-<span class="mono">clg400</span> nudi 100 korisničkih pinova.</p>
+sintetisalo bez vremenskog cilja. Režim <span class="mono">out-of-context</span>
+(OOC) sintetiše jezgro kao samostalan blok, bez povezivanja njegovih portova na
+stvarne pinove uređaja &mdash; alat tako ne pokušava da smesti I/O bafere za sve
+signale. To je ovde i nužno, jer golo jezgro ima 118 portova, a paket
+<span class="mono">clg400</span> nudi samo 100 korisničkih pinova.</p>
 
 <h2>7.2. Utrošeni resursi</h2>
 
@@ -1429,18 +1575,15 @@ nužan zato što golo jezgro ima 118 portova, a paket
     <tr><td>Slice registri (FF)</td><td class="n">664</td><td class="n">35.200</td><td class="n">1,89 %</td></tr>
     <tr><td>DSP48E1</td><td class="n">9</td><td class="n">80</td><td class="n">11,25 %</td></tr>
     <tr><td>Block RAM (RAMB36E1)</td><td class="n">9</td><td class="n">60</td><td class="n">15,00 %</td></tr>
-    <tr><td>LUT kao memorija</td><td class="n"><b>0</b></td><td class="n">6.000</td><td class="n">0,00 %</td></tr>
   </tbody>
 </table>
 
-<p>Jezgro zauzima manje od devetine logičkih resursa uređaja. Red <i>LUT kao
-memorija</i> jednak je nuli, čime je potvrđeno da je integralna slika smeštena u
-blok-memoriju, a ne raspodeljena po LUT-ovima.</p>
+<p>Jezgro zauzima manje od devetine logičkih resursa uređaja.</p>
 
 <p>U integrisanom sistemu jedna instanca nije golo jezgro nego ceo IP
 <span class="mono">ncc_accel</span> &mdash; jezgro sa dva AXI kontrolera i memorijskim
 podsistemom &mdash; što po instanci iznosi 1.887 LUT umesto 1.472. Zauzeće celog sistema
-je 35,4&nbsp;% LUT-ova (odeljak 10.2).</p>
+je 35,4&nbsp;% LUT-ova (odeljak 10.1).</p>
 
 <h2>7.3. Kritična putanja i maksimalna frekvencija</h2>
 
@@ -1532,8 +1675,8 @@ zato može koristiti za predviđanje latencije pri drugim veličinama zadatka.</
   </tbody>
 </table>
 
-<p>Dominacija glavne petlje sa 99,3&nbsp;% potvrđuje da je protočnost unutrašnje petlje
-bila prava meta optimizacije.</p>
+<p>Glavna petlja nosi 99,3&nbsp;% vremena, što potvrđuje da je baš njenu protočnost
+trebalo najviše ubrzati.</p>
 
 <h2>7.5. Funkcionalna verifikacija</h2>
 
@@ -1571,11 +1714,6 @@ kao golo jezgro, čime je pokazano da AXI omotač ne unosi izmenu u obradu.</p>
   </tbody>
 </table>
 
-<p class="noind">Poseban test za burst prenose postoji zato što je prvi integracioni
-testbench koristio isključivo pojedinačne transfere, pa je jedan defekt u generisanom AXI
-kontroleru ostao neotkriven: pri čitanju burst-om vraćala se prethodna reč na svakom
-beat-u posle prvog. Procesor taj put nikad ne pogodi, ali svaki DMA prenos ga pogodi.</p>
-
 <!-- ============================ 8. IP JEZGRO ============================ -->
 <h1>8. Pakovanje u IP jezgro</h1>
 
@@ -1586,12 +1724,11 @@ standardni interfejs. Od dva uobičajena obrasca &mdash; akcelerator kao <b>mast
 sam čita deljenu memoriju, ili kao <b>slave</b> sa sopstvenim internim memorijama &mdash;
 izabran je drugi.</p>
 
-<p>Master interfejs bi zahtevao novu mašinu stanja za adresiranje i rukovanje odgovorima,
-dakle neverifikovanu logiku u bloku koji je do tada bio bit-tačan. Slave obrazac ne dira
-jezgro: <span class="mono">ncc_core</span> ulazi u omotač nepromenjen, pa verifikacija iz
-odeljka 7.5 ostaje na snazi. Cena je što se segment slike i šablon moraju preneti u
-interne memorije pre svakog poziva, što košta oko 7&nbsp;% ukupnog vremena ako prenos radi
-procesor, odnosno oko 1&nbsp;% ako ga radi DMA (odeljak 9.5).</p>
+<p>Master interfejs bi zahtevao novu mašinu stanja za adresiranje i rukovanje odgovorima.
+Slave obrazac ne dira jezgro: <span class="mono">ncc_core</span> ulazi u omotač
+nepromenjen. Cena je što se segment slike i šablon moraju preneti u
+interne memorije pre svakog poziva &mdash; u izmerenom radu na ploči to iznosi oko
+10,5&nbsp;% ukupnog vremena (odeljak 10.3).</p>
 
 <p class="noind">Time se odstupa od sistemskog modela, koji pretpostavlja deljenu
 blok-memoriju na adresi <span class="mono">0x4000_0000</span>. U slave obrascu te memorije
@@ -1618,13 +1755,16 @@ pristupa registrima i na masovni prenos piksela.</p>
 </table>
 
 <p>Za registre je AXI4-Lite dovoljan. Za memorije je uzet pun AXI4 zbog <i>burst</i>
-prenosa &mdash; bez njih bi DMA izdavao po jednu transakciju na svaku reč, što bi prenos
-od 8.100 reči učinilo besmisleno skupim.</p>
+prenosa &mdash; bez njih bi DMA izdavao po jednu transakciju na svaku reč. Sam
+IP i interkonekt podržavaju burst (dokazano testom <span class="mono">ncc_accel_burst_tb</span>,
+dužina 8), ali se u trenutnoj aplikaciji na ploči ne koriste: DMA je isključen
+(odeljak 10.3), pa prenose radi procesor, reč po reč.</p>
 
-<p class="noind">Širina adrese interfejsa <span class="mono">S01</span> nije slobodan
-parametar: port ka memorijskom podsistemu je fiksno 17-bitni. Pošto čarobnjak za pakovanje
-ume da tu vrednost vrati na podrazumevanu, u kodu stoji statička tvrdnja koja sintezu
-zaustavlja ako vrednost nije 17 &mdash; umesto da blok tiho preklopi sva tri regiona.</p>
+<p class="noind">Širina adrese na interfejsu <span class="mono">S01</span> mora biti
+tačno 17 bita, jer je toliko širok port ka memorijskom podsistemu. Čarobnjak za
+pakovanje ume tu vrednost tiho da vrati na podrazumevanu (10 bita), pa je u kod
+dodata provera koja zaustavi sintezu ako širina nije 17 &mdash; bez nje bi IP samo
+prekrio dva od tri memorijska regiona, bez ijedne greške pri prevođenju.</p>
 
 <h2>8.3. Regioni unutar memorijskog interfejsa</h2>
 
@@ -1651,7 +1791,7 @@ Dekodovanje je čisto kombinaciono: <span class="mono">region = addr(16:15)</spa
 
 <p>Jedan piksel zauzima celu 32-bitnu reč, iako mu je dovoljan bajt. Time procesor i DMA
 pristupaju svim regionima na isti način, bez pakovanja bajtova. Cena je četiri puta veći
-prenos kroz magistralu, ali prenos nije usko grlo (odeljak 9.5). Regioni su poravnati na
+prenos kroz magistralu, ali prenos nije usko grlo (odeljak 10.3). Regioni su poravnati na
 32&nbsp;KB, a najduži burst je 1&nbsp;KB, pa nijedan burst ne može preći granicu
 regiona.</p>
 
@@ -1679,11 +1819,10 @@ softver iz prethodne faze projekta radi bez menjanja adresa.</p>
   </tbody>
 </table>
 
-<p class="noind">Dva detalja su bitna za softver. <b>Start je impuls, ne stanje:</b> upis
-u <span class="mono">CTRL</span> proizvodi jednotaktni impuls, jer bi jezgro pri zadržanom
-nivou po završetku odmah krenulo ponovo. <b>Signal <span class="mono">done</span> se
-pamti</b> u bistabilu koji se briše na sledeći start, jer bi procesor jednotaktni impuls
-gotovo sigurno propustio.</p>
+<p class="noind"><span class="mono">CTRL</span> je impuls, ne stanje &mdash; jedan upis
+pokreće jednu obradu; da je stanje, jezgro bi krenulo ponovo čim se obrada završi.
+<span class="mono">STATUS</span> pamti <span class="mono">done</span> u bistabilu koji
+se briše tek na sledeći start, jer bi procesor kratak impuls lako propustio.</p>
 
 <!-- ============================ 9. INTEGRACIJA ============================ -->
 <h1>9. Integracija u sistem</h1>
@@ -1692,7 +1831,10 @@ gotovo sigurno propustio.</p>
 
 <p>Sistem <span class="mono">ncc_system</span> čine procesorski sistem Zynq, <b>dve</b>
 instance akceleratora, DMA kontroler za prenos memorija-memorija i AXI interkonekt koji ih
-povezuje. Ceo sistem radi na jednom taktu, pa nema prelaza između taktnih domena.</p>
+povezuje. Ceo sistem radi na jednom taktu, pa nema prelaza između taktnih domena. BRAM
+(SAT i interne memorije slike/šablona/rezultata) nije zaseban blok na slici &mdash; nalazi
+se unutar svake <span class="mono">ncc_accel</span> instance, u njenom memorijskom
+podsistemu (odeljak 8.1).</p>
 
 <figure>
 <svg viewBox="0 0 660 430" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
@@ -1787,6 +1929,26 @@ povezuje. Ceo sistem radi na jednom taktu, pa nema prelaza između taktnih domen
 Zynq PS, dve instance akceleratora, DMA memorija&ndash;memorija i jedan AXI interkonekt</figcaption>
 </figure>
 
+<p>Slika 5 je isti taj sistem onako kako ga prikazuje Vivado, sa svim signalima na
+granicama blokova. Dijagram nije crtan rukom nego je rezultat skripte
+<span class="mono">create_bd.tcl</span> &mdash; svaka veza na slici je posledica jedne
+naredbe <span class="mono">connect_bd_intf_net</span> ili
+<span class="mono">connect_bd_net</span> u toj skripti, pa je sistem reproducibilan
+iz praznog projekta.</p>
+
+<figure>
+<img src="slika_block_design.png" alt="Block design ncc_system u Vivadu" style="width:100%">
+<figcaption><b>Slika 5.</b> Block design <span class="mono">ncc_system</span> u Vivadu:
+<span class="mono">processing_system7_0</span> (Zynq PS, <span class="mono">M_AXI_GP0</span>
+i <span class="mono">S_AXI_HP0</span>), <span class="mono">axi_interconnect_0</span>
+(2 mastera &rarr; 6 slave-ova), <span class="mono">axi_cdma_0</span>, i dve instance
+akceleratora <span class="mono">ncc0</span>/<span class="mono">ncc1</span>, svaka sa
+svojim <span class="mono">s00_axi</span> (kontrola) i <span class="mono">s01_axi</span>
+(memorije). <span class="mono">proc_sys_reset_0</span> deli
+<span class="mono">peripheral_aresetn</span> svim blokovima; spolja izlaze samo
+<span class="mono">DDR</span> i <span class="mono">FIXED_IO</span>.</figcaption>
+</figure>
+
 <h2>9.2. Adresna mapa</h2>
 
 <p>Mapa je fiksirana u skripti koja gradi sistem, a ne prepuštena automatskom
@@ -1841,76 +2003,39 @@ kroz programabilnu logiku, jer mu do sopstvene memorije vodi direktan put.</p>
 <h2>9.3. Tok podataka po jednom polju table</h2>
 
 <p>Softver za svako neprazno polje izvršava sledeći niz. Redosled je određen time što su
-memorije jednostruko baferovane, pa jezgro ne može računati dok se u njega upisuje.</p>
+memorije jednostruko baferovane, pa jezgro ne može računati dok se u njega upisuje.
+Prenose u svim koracima ispod obavlja procesor, reč po reč &mdash; DMA kontroler postoji
+u topologiji (odeljak 9.1), ali se ne koristi (odeljak 10.3).</p>
 
 <ol>
   <li>Procesor proverava da li je polje prazno, bez pristupa programabilnoj logici.</li>
   <li>Procesor u DDR-u priprema bafer sa jednim pikselom po 32-bitnoj reči i izbacuje ga
       iz keša.</li>
-  <li>DMA prenosi segment slike u <span class="mono">S01 + 0x00000</span> oba
+  <li>Procesor prenosi segment slike u <span class="mono">S01 + 0x00000</span> oba
       akceleratora.</li>
-  <li>DMA prenosi šablon u <span class="mono">S01 + 0x08000</span>; šabloni se raspakuju
-      jednom na početku programa.</li>
+  <li>Procesor prenosi šablon u <span class="mono">S01 + 0x08000</span>; šabloni se
+      raspakuju jednom na početku programa.</li>
   <li>Procesor upisuje dimenzije u registre i upisom u <span class="mono">CTRL</span>
       pokreće obradu na oba bloka.</li>
   <li>Procesor čeka bit <span class="mono">done</span> na oba bloka.</li>
-  <li>DMA prenosi mapu rezultata u DDR; procesor poništava keš i traži maksimum.</li>
+  <li>Procesor prenosi mapu rezultata iz oba bloka u DDR i traži maksimum.</li>
 </ol>
 
 <h2>9.4. Dva pravila koja softver mora poštovati</h2>
 
-<p class="noind"><b>Skorovi se porede kao neoznačeni brojevi.</b> Vrednost
-<span class="mono">0x80000000</span> označava NCC<sup>2</sup>&nbsp;=&nbsp;1,0, ali
-tumačena kao označen ceo broj ona je negativna, pa bi softver sa označenim poređenjem
-odbacio upravo savršeno poklapanje.</p>
-
-<p class="noind"><b>Nikad DMA i procesor nad istim memorijskim interfejsom istovremeno.</b>
-Pri istovremenom čitanju i upisu adresa se vodi po čitanju, a upis nije zabranjen.
-Situacija je sa jednim procesorom i jednim DMA kanalom nedostižna jer se oni serijalizuju
-u softveru, pa arbitracija nije ni ugrađena &mdash; ali hardver invarijantu ne
-proverava.</p>
-
-<h2>9.5. Zašto DMA, iako nije performansni dobitak</h2>
-
-<p>DMA je izabran zato što ga zadatak izričito navodi među komponentama za integraciju, a
-ne zato što donosi značajno ubrzanje. Po jednom polju table prenosi se oko 147&nbsp;KB.
-Procesor taj prenos obavi za oko 3,4&nbsp;ms (oko 7&nbsp;% vremena obrade polja), a DMA za
-oko 0,4&nbsp;ms (oko 1&nbsp;%), pa je neto dobitak oko 6&nbsp;%.</p>
-
-<table>
-  <caption><b>Tabela 25.</b> Izmereni saobraćaj po jednom polju table (ploča, 32 polja)</caption>
-  <thead>
-    <tr><th>Smer</th><th class="n">Reči</th><th class="n">Bajtova</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>upis u <span class="mono">S01</span> (slika i šabloni)</td><td class="n">22.730</td><td class="n">90.919</td></tr>
-    <tr><td>čitanje mape rezultata</td><td class="n">14.831</td><td class="n">59.323</td></tr>
-    <tr><td><b>ukupno</b></td><td class="n"><b>37.561</b></td><td class="n"><b>150.243 &asymp; 147 KiB</b></td></tr>
-  </tbody>
-</table>
-
-<p>Preklapanje prenosa sa računanjem, što bi bio pravi dobitak, nije moguće jer su
-memorije jednostruko baferovane i jezgro ih čita dok računa. DMA je dakle brži prenos, a
-ne skrivena latencija; dvostruko baferovanje memorije slike je pravac za dalji rad.</p>
+<p class="noind">Skorovi se porede kao neoznačeni brojevi (<span class="mono">u32</span>),
+ne kao <span class="mono">int32</span>: <span class="mono">0x80000000</span>
+(NCC<sup>2</sup>&nbsp;=&nbsp;1,0) je kao označen broj negativan, pa bi traženje
+maksimuma odbacilo baš savršeno poklapanje. DMA i procesor ne smeju istovremeno
+pristupati istom <span class="mono">S01</span> interfejsu. Kod istovremenog čitanja i
+upisa prioritet ima čitanje &mdash; upis tada ode na pogrešnu adresu. Sa jednim
+procesorom i jednim DMA kanalom to se rešava redosledom u softveru (procesor čeka
+<span class="mono">XAxiCdma_IsBusy</span>); hardver to ne proverava sâm.</p>
 
 <!-- ======================= 10. ANALIZA SISTEMA ======================= -->
 <h1>10. Analiza integrisanog sistema</h1>
 
-<h2>10.1. Metod</h2>
-
-<p>Ceo sistem se gradi i implementira <b>jednom skriptom, u komandnom režimu</b>, bez
-ručnih koraka u grafičkom okruženju. Sve brojke u ovom poglavlju su post-route.</p>
-
-<p>U tok su ugrađene dve kapije koje ga zaustavljaju na tihim otkazima. Prva proverava da
-IP nije sintetisan kao prazna kutija, jer pogrešna oznaka jezika u paketu daje prazan blok
-bez ijedne greške. Druga poredi dve kopije izvora jezgra &mdash; jednu za simulaciju,
-drugu unutar IP-a &mdash; i pada ako se raziđu.</p>
-
-<p class="noind">Fizička optimizacija posle rutiranja nije opcija: bez nje sistem
-<b>ne zatvara</b> vremenska ograničenja (rezerva &minus;0,714&nbsp;ns naspram
-&minus;0,233&nbsp;ns nad istim RTL-om), pa je skripta izričito uključuje.</p>
-
-<h2>10.2. Utrošeni resursi</h2>
+<h2>10.1. Utrošeni resursi</h2>
 
 <table>
   <caption><b>Tabela 19.</b> Resursi celog sistema (post-route, xc7z010clg400-1)</caption>
@@ -1938,17 +2063,17 @@ drugu unutar IP-a &mdash; i pada ako se raziđu.</p>
   </tbody>
 </table>
 
-<p>Po instanci je 1.887 LUT, a golo jezgro troši 1.472 (odeljak 7.2); razlika od oko
-440 LUT je cena standardnog interfejsa. Interkonekt i DMA zajedno troše 2.433 LUT.</p>
+<p>Po instanci je 1.887 LUT, a golo jezgro troši 1.472 (odeljak 7.2); razlika od
+415 LUT je cena standardnog interfejsa. Interkonekt i DMA zajedno troše 2.433 LUT.</p>
 
-<p class="noind"><b>Blok-memorija je najveće zauzeće i slabost ovog rešenja.</b> Sa
+<p class="noind">Blok-memorija je najveće zauzeće i slabost ovog rešenja. Sa
 65&nbsp;% je to jedini resurs bez velike rezerve. Uzrok je 32-bitna reč integralne slike,
 kod koje je dovoljan 21 bit, jer je najveća moguća suma
 90&nbsp;&middot;&nbsp;90&nbsp;&middot;&nbsp;255&nbsp;=&nbsp;2.065.500. Sužavanje bi
 oslobodilo oko šest blokova i spustilo zauzeće na približno 55&nbsp;%. Nije izvedeno jer
 memorija nije usko grlo, ali je to prva mera ako se doda treća instanca.</p>
 
-<h2>10.3. Vremenska analiza i radni takt</h2>
+<h2>10.2. Vremenska analiza i radni takt</h2>
 
 <table>
   <caption><b>Tabela 21.</b> Vremenska analiza sistema (post-route + fizička optimizacija)</caption>
@@ -1962,20 +2087,19 @@ memorija nije usko grlo, ali je to prva mera ako se doda treća instanca.</p>
     <tr><td>Krajnjih tačaka koje krše ograničenje</td><td class="n"><b>0 od 15.458</b></td></tr>
     <tr><td>Kritična putanja</td><td class="n"><span class="mono">ncc0/core_inst/v_reg[2]</span> &rarr;<br>
         <span class="mono">ncc0/ms_inst/img_mem/ADDRBWRADDR[14]</span></td></tr>
-    <tr><td>Provera pravila projektovanja</td><td class="n">bez kritičnih upozorenja</td></tr>
   </tbody>
 </table>
 
-<p><b>Sistem zatvara vremenska ograničenja na 90,909 MHz</b>, sa pozitivnom rezervom i za
+<p>Sistem zatvara vremenska ograničenja na 90,909 MHz, sa pozitivnom rezervom i za
 postavljanje i za zadržavanje, i bez ijedne krajnje tačke koja krši ograničenje.</p>
 
 <p class="noind">Traženo je 95&nbsp;MHz, a PLL procesorskog sistema deli ulaznu
 frekvenciju celim brojem, pa je najbliža ostvariva vrednost
 1000/11&nbsp;=&nbsp;90,909&nbsp;MHz. Odstupanje od nominalnih 100&nbsp;MHz iznosi
-9,1&nbsp;%, dakle unutar granice od 20&nbsp;% koju zadatak dopušta.</p>
+9,1&nbsp;%, dakle unutar granice od 20&nbsp;%.</p>
 
 <table>
-  <caption><b>Tabela 27.</b> Sistem na dva ograničenja takta (post-route + fizička optimizacija)</caption>
+  <caption><b>Tabela 22.</b> Sistem na dva ograničenja takta (post-route + fizička optimizacija)</caption>
   <thead>
     <tr><th>Ograničenje</th><th class="n">WNS</th><th class="n">Krajnjih tačaka krši</th><th class="n">Takt</th></tr>
   </thead>
@@ -1996,14 +2120,14 @@ putanja koja je kritična i u samostalnom jezgru (odeljak 7.3). Ograničenje je 
 a ne integracija: njena cena je razlika između +0,146&nbsp;ns samostalno i
 +0,032&nbsp;ns u sistemu, oko 0,11&nbsp;ns.</p>
 
-<h2>10.4. Propusnost sistema</h2>
+<h2>10.3. Propusnost sistema</h2>
 
 <p>Ceo tok &mdash; učitavanje slike table, petlja 8&times;8, gruba pretraga, fina potvrda i
 generisanje FEN notacije &mdash; izvršen je <b>na hardveru</b>. Rezultat je bit-identičan
 referentnom modelu: 32 od 32 polja prepoznata, FEN znak po znak jednak zvaničnom.</p>
 
 <table>
-  <caption><b>Tabela 26.</b> Izmerena raspodela vremena na ploči (cela tabla, 32 zauzeta polja)</caption>
+  <caption><b>Tabela 23.</b> Izmerena raspodela vremena na ploči (cela tabla, 32 zauzeta polja)</caption>
   <thead>
     <tr><th>Faza</th><th class="n">Vreme</th><th class="n">Udeo</th></tr>
   </thead>
@@ -2020,14 +2144,19 @@ referentnom modelu: 32 od 32 polja prepoznata, FEN znak po znak jednak zvanično
 table i provera praznog polja &mdash; sve bez učešća programabilne logike.</p>
 
 <p>Merenje potvrđuje model latencije: model predviđa oko 1.680&nbsp;ms računanja za 32
-polja, a izmereno je 1.555&nbsp;ms, jer polja sa manje kandidata troše manje. Obrada iste
-slike u referentnom rešenju traje 3,667&nbsp;s, a na ploči je izmereno <b>1,782&nbsp;s
+polja, pod pretpostavkom da svako polje ima najveći mogući broj kandidata (grubi i fini
+prolaz). Izmereno je manje, 1.555&nbsp;ms, jer prazna polja preskaču obradu, a većina
+zauzetih polja ima svega jedan ili dva kandidata za tip figure, ne maksimalan broj. Obrada
+iste slike u referentnom rešenju traje 3,667&nbsp;s, a na ploči je izmereno <b>1,782&nbsp;s
 &mdash; 2,06&times; brže</b>, uz identičan rezultat.</p>
 
-<p class="noind">Prenose u izmerenom toku obavlja procesor, a ne DMA, jer
-<span class="mono">axi_cdma</span> ne uspeva da izvrši prenos duži od dva takta magistrale
-kroz interkonekt konfigurisan kao deljena magistrala. Iz tabele se vidi da to košta najviše
-oko 9&nbsp;% ukupnog vremena, jer računanje ionako čini 87&nbsp;%.</p>
+<p class="noind">Prenose u izmerenom toku obavlja procesor, a ne DMA. Razlog je
+proveren direktno preko JTAG-a, van naše aplikacije: <span class="mono">axi_cdma</span>
+ne uspeva da izvrši prenos duži od dva takta magistrale kroz
+<span class="mono">axi_interconnect_0</span>, konfigurisan kao deljena magistrala
+(<span class="mono">STRATEGY=1</span>) &mdash; treći i četvrti beat jednostavno
+zaglave. Zato prenose radi procesor, reč po reč; iz tabele se vidi da to košta najviše
+oko 10,5&nbsp;% ukupnog vremena, jer računanje ionako čini 87&nbsp;%.</p>
 
 <p>Model latencije omogućava da se izmereno vreme preračuna na drugu veličinu zadatka:</p>
 
@@ -2037,7 +2166,7 @@ oko 9&nbsp;% ukupnog vremena, jer računanje ionako čini 87&nbsp;%.</p>
 </div>
 
 <table>
-  <caption><b>Tabela 22.</b> Propusnost pri radnom taktu od 90,909 MHz</caption>
+  <caption><b>Tabela 24.</b> Propusnost pri radnom taktu od 90,909 MHz</caption>
   <thead>
     <tr><th>Veličina zadatka</th><th class="n">Taktova</th><th class="n">Vreme</th><th>Izvor</th></tr>
   </thead>
@@ -2050,46 +2179,10 @@ oko 9&nbsp;% ukupnog vremena, jer računanje ionako čini 87&nbsp;%.</p>
 <p>Pošto u sistemu rade dve instance paralelno, sistem obrađuje dva polja table u vremenu
 u kome bi jedna instanca obradila jedno.</p>
 
-<h2>10.5. Put do zatvaranja vremenskih ograničenja</h2>
-
-<p>Prva verzija integrisanog sistema imala je rezervu od <b>&minus;3,299&nbsp;ns</b>. Do
-pozitivne rezerve se došlo kroz pet mera; prve tri su popravile vreme, a poslednje dve
-površinu.</p>
+<h2>10.4. Poređenje sa referentnim rešenjem</h2>
 
 <table>
-  <caption><b>Tabela 23.</b> Mere kojima su zatvorena vremenska ograničenja</caption>
-  <thead>
-    <tr><th>Mera</th><th>Gde</th><th class="n">Doprinos</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>Protočni stepen u MAC petlji</td><td>RTL jezgra</td><td class="n"><b>+2,43 ns</b></td></tr>
-    <tr><td>Fizička optimizacija posle rutiranja</td><td>tok implementacije</td><td class="n">+0,481 ns</td></tr>
-    <tr><td>Registar pred deliocem</td><td>RTL jezgra</td><td class="n">+0,155 ns</td></tr>
-    <tr><td>Deljena magistrala umesto krosbara</td><td>interkonekt</td>
-        <td class="n">interkonekt sam:<br>8.673 &rarr; 1.616 LUT</td></tr>
-    <tr><td>Sužavanje porta <span class="mono">S_AXI_HP0</span> na 32 bita</td><td>procesorski sistem</td>
-        <td class="n">ceo sistem:<br>9.681 &rarr; 6.261 LUT<br>8.696 &rarr; 5.024 FF</td></tr>
-  </tbody>
-</table>
-
-<p>Fizička optimizacija donosi više od drugog preseka u RTL-u &mdash; 0,481 naspram
-0,155&nbsp;ns &mdash; a ne zahteva izmenu koda. To je razlog što je u skripti obavezan
-korak.</p>
-
-<p class="noind">Poslednje dve mere nisu popravile vreme nego površinu. Zamena krosbara
-deljenom magistralom smanjila je interkonekt sa 8.673 na 1.616&nbsp;LUT, a sužavanje porta
-<span class="mono">S_AXI_HP0</span> spustilo je zauzeće celog sistema sa 55,0 na
-35,6&nbsp;%, jer je uklonilo šest konvertora širine &mdash; dok se vremenska rezerva pritom
-pomerila samo sa &minus;0,233 na &minus;0,232&nbsp;ns.</p>
-
-<h2>10.6. Poređenje sa referentnim rešenjem</h2>
-
-<p>Sistem se poredi sa rešenjem iz prethodne faze projekta, u kome je isto jezgro dobijeno
-visokonivoskom sintezom iz jezika C. Poređenje ima smisla po resursima i po broju taktova
-na jedinicu posla.</p>
-
-<table>
-  <caption><b>Tabela 24.</b> Poređenje sa rešenjem iz visokonivoske sinteze</caption>
+  <caption><b>Tabela 25.</b> Poređenje sa rešenjem iz visokonivoske sinteze</caption>
   <thead>
     <tr><th>Veličina</th><th class="n">Referentno rešenje</th><th class="n">Ovaj rad</th></tr>
   </thead>
@@ -2099,23 +2192,13 @@ na jedinicu posla.</p>
     <tr><td>Blok-memorija po instanci</td><td class="n">4 manja bloka</td><td class="n">19 većih &larr; slabije</td></tr>
     <tr><td>LUT za dve instance</td><td class="n">10.538 (59,9 %)</td><td class="n"><b>ceo sistem</b> 6.225 (35,4 %)</td></tr>
     <tr><td>Taktova za 90&times;90 / 30&times;30</td><td class="n">10.360.183</td><td class="n"><b>3.783.652</b></td></tr>
-    <tr><td>Taktova po piksel-operaciji</td><td class="n">3,09</td><td class="n"><b>1,13</b></td></tr>
   </tbody>
 </table>
 
-<p><b>Ceo sistem &mdash; dve instance, interkonekt i DMA zajedno &mdash; staje u manje
-LUT-ova nego što referentno rešenje troši samo na svoja dva jezgra.</b> Po broju taktova
-na istom zadatku razlika je 2,74&times;. Jedina veličina po kojoj je ovo rešenje slabije
-je blok-memorija, sa uzrokom navedenim u odeljku 10.2.</p>
-
-<p class="noind">Veličina <i>taktova po piksel-operaciji</i> nije konstanta: raste kako
-šablon opada, jer se režija od 112 taktova po poziciji prozora amortizuje na manje
-množenja. Na šablonu 30&times;30 iznosi 1,13, a na 25&times;15 čak 1,31, pa je u tabeli
-navedena vrednost na istoj veličini zadatka na kojoj je merena i referenca.</p>
-
-<p class="noind">Ukupno vreme obrade table ne poredi se tabelarno zato što je sistemski
-model prethodne faze kalibrisan konstantom izvedenom iz izveštaja visokonivoske sinteze.
-Poređenje po taktovima i po resursima ne zavisi od te kalibracije.</p>
+<p>Ceo sistem &mdash; dve instance, interkonekt i DMA zajedno &mdash; staje u manje
+LUT-ova nego što referentno rešenje troši samo na svoja dva jezgra. Po broju taktova na
+istom zadatku razlika je 2,74&times;. Jedina veličina po kojoj je ovo rešenje slabije je
+blok-memorija, sa uzrokom navedenim u odeljku 10.1.</p>
 
 <!-- ============================ 11. ZAKLJUČAK ============================ -->
 <h1>11. Zaključak</h1>
@@ -2135,28 +2218,28 @@ akceleratora i DMA kontrolerom. Ključni rezultati:</p>
       sekundi (odeljak 7.4);</li>
   <li>ceo sistem zauzima <b>35,4&nbsp;% LUT-ova</b> uređaja, manje nego što referentno
       rešenje troši samo na svoja dva jezgra (59,9&nbsp;%), i po instanci 1.887 naspram
-      5.269 LUT (odeljci 10.2 i 10.6);</li>
+      5.269 LUT (odeljci 10.1 i 10.4);</li>
   <li>sistem zatvara vremenska ograničenja na 90,909&nbsp;MHz, sa rezervom od
       +0,268&nbsp;ns i bez ijedne od 15.458 krajnjih tačaka koja krši ograničenje
-      (odeljak 10.3);</li>
+      (odeljak 10.2);</li>
   <li>na istom zadatku sistem troši <b>2,74&times; manje taktova</b> od referentnog
-      rešenja: 3.783.652 naspram 10.360.183 (odeljak 10.6).</li>
+      rešenja: 3.783.652 naspram 10.360.183 (odeljak 10.4).</li>
 </ul>
 
 <p class="noind">Slabost se navodi otvoreno: blok-memorija je jedini resurs bez rezerve, sa
 65&nbsp;% zauzeća, i jedina veličina po kojoj je ovo rešenje slabije od referentnog. Uzrok
 je 32-bitna reč integralne slike kod koje je dovoljan 21 bit; suženje bi zauzeće spustilo
-na oko 55&nbsp;% (odeljak 10.2).</p>
+na oko 55&nbsp;% (odeljak 10.1).</p>
 
 <p class="noind">Radni takt nije ograničenje: sistem zatvara i 100&nbsp;MHz
 (rezerva +0,032&nbsp;ns). Radna tačka je zadržana na 90,909&nbsp;MHz zato što su sva
 merenja izvedena na njoj i zato što je rezerva tamo veća; odstupanje od 9,1&nbsp;% je
-unutar dopuštenih 20&nbsp;% (odeljak 10.3).</p>
+unutar dopuštenih 20&nbsp;% (odeljak 10.2).</p>
 
-<p><b>Sistem je proveren na realnoj ploči.</b> Konfiguraciona datoteka je generisana,
+<p>Sistem je proveren na realnoj ploči. Konfiguraciona datoteka je generisana,
 softver prenesen iz izvršne specifikacije, i ceo tok izvršen na hardveru: 32 od 32 polja
 prepoznata, FEN znak po znak jednak zvaničnom, ukupno 1,782&nbsp;s naspram 3,667&nbsp;s
-referentnog rešenja (odeljak 10.4).</p>
+referentnog rešenja (odeljak 10.3).</p>
 
 </body>
 </html>

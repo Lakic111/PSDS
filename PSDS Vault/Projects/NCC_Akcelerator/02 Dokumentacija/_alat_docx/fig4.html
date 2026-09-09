@@ -1,0 +1,276 @@
+<!doctype html><meta charset='utf-8'><style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #000;
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  p { margin: 0 0 0.55em 0; text-indent: 1.2em; }
+  p.noind, li p { text-indent: 0; }
+
+  h1 {
+    font-size: 15pt; font-weight: bold; margin: 0 0 0.9em 0;
+    page-break-before: always; page-break-after: avoid;
+  }
+  h1.first { page-break-before: avoid; }
+  h2 { font-size: 12.5pt; margin: 1.3em 0 0.5em 0; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 1.1em 0 0.4em 0; page-break-after: avoid; }
+
+  /* ---------- naslovna ---------- */
+  .cover { page-break-after: always; text-align: center; padding-top: 45mm; }
+  .cover .fac { font-size: 12pt; letter-spacing: .02em; }
+  .cover .subj { font-size: 13pt; margin-top: 26mm; font-variant: small-caps; }
+  .cover .title {
+    font-size: 21pt; font-weight: bold; margin: 8mm 14mm 0 14mm; line-height: 1.3;
+  }
+  .cover .sub { font-size: 13pt; margin-top: 6mm; }
+  .cover .rule { border-top: 1.4pt solid #000; width: 70%; margin: 9mm auto; }
+  .cover .meta { font-size: 12pt; margin-top: 20mm; line-height: 1.9; }
+  .cover .foot { margin-top: 34mm; font-size: 11pt; }
+
+  /* ---------- sadrzaj ---------- */
+  .toc { page-break-after: always; }
+  .toc h1 { text-align: center; page-break-before: avoid; }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0.18em 0; text-align: left; }
+  .toc li.l1 { font-weight: bold; margin-top: 0.7em; }
+  .toc li.l2 { padding-left: 1.6em; font-size: 11pt; }
+  .toc li.l3 { padding-left: 3.2em; font-size: 10.5pt; }
+
+  /* ---------- tabele ---------- */
+  table {
+    border-collapse: collapse; width: 100%; margin: 0.7em 0 0.25em 0;
+    font-size: 10pt; page-break-inside: avoid;
+  }
+  caption { caption-side: bottom; font-size: 9.5pt; font-style: italic;
+            padding-top: 0.4em; text-align: center; }
+  caption b { font-style: normal; }
+  th, td { padding: 3.5px 7px; text-align: left; vertical-align: top; }
+  thead th { border-top: 1.1pt solid #000; border-bottom: 0.7pt solid #000;
+             font-weight: bold; text-align: center; }
+  tbody tr:last-child td { border-bottom: 1.1pt solid #000; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td.c, th.c { text-align: center; }
+  tbody tr.sep td { border-top: 0.4pt solid #999; }
+
+  /* ---------- kod / formule ---------- */
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9.6pt; }
+  pre {
+    font-family: Consolas, "Courier New", monospace; font-size: 9.2pt;
+    line-height: 1.32; background: #f6f6f4; border: 0.5pt solid #ccc;
+    padding: 7px 9px; margin: 0.6em 0; overflow-x: auto;
+    page-break-inside: avoid; text-align: left; white-space: pre;
+  }
+  .formula {
+    text-align: center; margin: 0.9em 0; font-size: 12pt; font-style: italic;
+    page-break-inside: avoid;
+  }
+  .formula .frac { display: inline-block; vertical-align: middle; text-align: center; }
+  .formula .frac > .num { display: block; padding: 0 .5em 2px .5em; border-bottom: 1pt solid #000; }
+  .formula .frac > .den { display: block; padding: 2px .5em 0 .5em; }
+  /* kvadratni koren koji se rasteže preko celog potkorenog izraza */
+  .sqrt { display: inline-flex; align-items: stretch; }
+  .sqrt > svg { width: .62em; height: auto; align-self: stretch; margin-right: 1px; overflow: visible; }
+  .sqrt > .radicand { border-top: 1.15pt solid #000; padding: 2px 3px 0 2px; }
+
+  /* ---------- figure ---------- */
+  figure { margin: 1em 0 0.4em 0; text-align: center; page-break-inside: avoid; }
+  figcaption { font-size: 9.5pt; font-style: italic; margin-top: 0.45em; text-align: center; }
+  figcaption b { font-style: normal; }
+  svg { max-width: 100%; height: auto; }
+  /* Visoke slike: ograniči visinu tako da slika i potpis stanu na istu stranu. */
+  figure.tall { page-break-before: always; }
+  figure.tall svg { max-height: 236mm; width: auto; }
+
+  .note {
+    border-left: 2.5pt solid #555; background: #f4f4f2;
+    padding: 6px 11px; margin: 0.8em 0; font-size: 10.3pt;
+    page-break-inside: avoid;
+  }
+  .note p { text-indent: 0; margin: 0 0 .35em 0; }
+  .note p:last-child { margin-bottom: 0; }
+
+  ul.plain, ol.plain { margin: 0.4em 0 0.7em 0; padding-left: 1.5em; }
+  ul.plain li, ol.plain li { margin-bottom: 0.28em; }
+
+  .kv { font-variant-numeric: tabular-nums; }
+  .ok  { font-weight: bold; }
+
+html,body{margin:0;padding:0;background:#fff}</style><svg width="1400" height="1120" viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="a2" markerWidth="8" markerHeight="8" refX="7" refY="2.6" orient="auto">
+      <path d="M0,0 L7,2.6 L0,5.2 z" fill="#000"/>
+    </marker>
+    <marker id="a3" markerWidth="8" markerHeight="8" refX="7" refY="2.6" orient="auto">
+      <path d="M0,0 L7,2.6 L0,5.2 z" fill="#777"/>
+    </marker>
+  </defs>
+  <style>
+    .bx  { fill:#fff; stroke:#000; stroke-width:1.1; }
+    .mem { fill:#eceff3; stroke:#000; stroke-width:1.1; }
+    .fu  { fill:#fbf7ee; stroke:#000; stroke-width:1.1; }
+    .acc { fill:#f0f4ec; stroke:#000; stroke-width:1.1; }
+    .div { fill:#f7edee; stroke:#000; stroke-width:1.4; }
+    .grp { fill:none; stroke:#888; stroke-width:1; stroke-dasharray:5 3; }
+    .t   { font-size:9.6px; text-anchor:middle; }
+    .tb  { font-size:10px; font-weight:bold; text-anchor:middle; }
+    .sm  { font-size:8.6px; fill:#444; text-anchor:middle; }
+    .gl  { font-size:10px; font-weight:bold; fill:#666; letter-spacing:.07em; }
+    .w   { stroke:#000; stroke-width:1.05; fill:none; marker-end:url(#a2); }
+    .c   { stroke:#777; stroke-width:.95; fill:none; stroke-dasharray:4 3; marker-end:url(#a3); }
+  </style>
+
+  <!-- okviri -->
+  <rect class="grp" x="8" y="26" width="512" height="470" rx="6"/>
+  <text class="gl" x="16" y="42">DATAPATH</text>
+  <rect class="grp" x="536" y="26" width="156" height="470" rx="6"/>
+  <text class="gl" x="544" y="42">CONTROLPATH</text>
+
+  <!-- memorije levo -->
+  <rect class="mem" x="18" y="60" width="116" height="34" rx="3"/>
+  <text class="tb" x="76" y="76">memorija slike</text>
+  <text class="sm" x="76" y="88">img_addr_o / img_data_i</text>
+
+  <rect class="mem" x="18" y="106" width="116" height="34" rx="3"/>
+  <text class="tb" x="76" y="122">memorija šablona</text>
+  <text class="sm" x="76" y="134">templ_addr_o / templ_data_i</text>
+
+  <rect class="mem" x="24" y="182" width="104" height="42" rx="3"/>
+  <text class="tb" x="76" y="198">SAT (interna)</text>
+  <text class="sm" x="76" y="210">91×91 × 32 b</text>
+  <text class="sm" x="76" y="220">blok-memorija</text>
+
+  <!-- SAT put -->
+  <rect class="fu" x="164" y="182" width="86" height="30" rx="3"/>
+  <text class="tb" x="207" y="197">± sabirač</text>
+  <text class="sm" x="207" y="207">sum_f = A−B−C+D</text>
+  <path class="w" d="M128,200 L162,200"/>
+
+  <rect class="div" x="286" y="176" width="92" height="42" rx="3"/>
+  <text class="tb" x="332" y="192">div_mean</text>
+  <text class="sm" x="332" y="203">sekvencijalni</text>
+  <text class="sm" x="332" y="213">W = 18</text>
+  <path class="w" d="M250,197 L284,197"/>
+
+  <!-- f_bar registar -->
+  <rect class="bx" x="286" y="126" width="92" height="26" rx="3"/>
+  <text class="tb" x="332" y="143">f_bar (8 b)</text>
+  <path class="w" d="M332,176 L332,154"/>
+
+  <rect class="bx" x="286" y="82" width="92" height="30" rx="3"/>
+  <text class="tb" x="332" y="95">template_mean</text>
+  <text class="sm" x="332" y="106">8 b</text>
+  <path class="w" d="M378,190 L400,190 L400,99 L380,99"/>
+
+  <!-- oduzimaci -->
+  <rect class="fu" x="164" y="60" width="86" height="30" rx="3"/>
+  <text class="tb" x="207" y="75">oduzimač</text>
+  <text class="sm" x="207" y="85">df_reg = px − f_bar</text>
+  <path class="w" d="M128,77 L162,77"/>
+  <path class="c" d="M286,139 L262,139 L262,84 L252,84"/>
+
+  <rect class="fu" x="164" y="106" width="86" height="30" rx="3"/>
+  <text class="tb" x="207" y="121">oduzimač</text>
+  <text class="sm" x="207" y="131">dt_reg = t − t_mean</text>
+  <path class="w" d="M128,123 L162,123"/>
+  <path class="c" d="M286,99 L268,99 L268,116 L252,116"/>
+
+  <!-- mnozaci -->
+  <rect class="fu" x="164" y="258" width="86" height="28" rx="3"/>
+  <text class="tb" x="207" y="276">× df_reg · dt_reg</text>
+  <rect class="fu" x="164" y="294" width="86" height="28" rx="3"/>
+  <text class="tb" x="207" y="312">× df_reg²</text>
+  <rect class="fu" x="164" y="330" width="86" height="28" rx="3"/>
+  <text class="tb" x="207" y="348">× dt_reg²</text>
+  <text class="sm" x="207" y="370">3 × DSP48E1, paralelno</text>
+
+  <path class="w" d="M207,90 L207,110"/>
+  <path class="w" d="M140,77 L140,272 L162,272"/>
+  <path class="w" d="M150,123 L150,308 L162,308"/>
+  <path class="w" d="M146,123 L146,344 L162,344"/>
+
+  <!-- akumulatori -->
+  <rect class="acc" x="286" y="258" width="92" height="28" rx="3"/>
+  <text class="tb" x="332" y="271">sum_num</text>
+  <text class="sm" x="332" y="281">27 b, označen</text>
+  <rect class="acc" x="286" y="294" width="92" height="28" rx="3"/>
+  <text class="tb" x="332" y="312">sum_den_f (26 b)</text>
+  <rect class="acc" x="286" y="330" width="92" height="28" rx="3"/>
+  <text class="tb" x="332" y="348">sum_den_t (26 b)</text>
+  <path class="w" d="M250,272 L284,272"/>
+  <path class="w" d="M250,308 L284,308"/>
+  <path class="w" d="M250,344 L284,344"/>
+
+  <!-- kvadriranje / proizvod -->
+  <rect class="fu" x="408" y="258" width="92" height="28" rx="3"/>
+  <text class="tb" x="454" y="271">kvadriranje</text>
+  <text class="sm" x="454" y="281">num_sq = sum_num²</text>
+  <rect class="fu" x="408" y="312" width="92" height="28" rx="3"/>
+  <text class="tb" x="454" y="325">množač</text>
+  <text class="sm" x="454" y="335">den_prod</text>
+  <path class="w" d="M378,272 L406,272"/>
+  <path class="w" d="M378,308 L392,308 L392,326 L406,326"/>
+  <path class="w" d="M378,344 L392,344 L392,326 L406,326"/>
+
+  <rect class="fu" x="408" y="200" width="92" height="26" rx="3"/>
+  <text class="tb" x="454" y="217">&lt;&lt; 31 (83 b)</text>
+  <path class="w" d="M454,258 L454,228"/>
+
+  <!-- div_ncc -->
+  <rect class="div" x="286" y="398" width="120" height="44" rx="3"/>
+  <text class="tb" x="346" y="415">div_ncc</text>
+  <text class="sm" x="346" y="426">sekvencijalni, W = 83</text>
+  <text class="sm" x="346" y="436">~83 takta / rezultat</text>
+  <path class="w" d="M478,226 L478,378 L400,378 L400,396"/>
+  <path class="w" d="M454,340 L454,368 L360,368 L360,396"/>
+
+  <rect class="mem" x="278" y="456" width="136" height="32" rx="3"/>
+  <text class="tb" x="346" y="470">mapa rezultata</text>
+  <text class="sm" x="346" y="482">result_addr_o / _data_o / _wr_o</text>
+  <path class="w" d="M346,442 L346,456"/>
+
+  <!-- controlpath -->
+  <rect class="bx" x="556" y="96" width="118" height="34" rx="3"/>
+  <text class="tb" x="615" y="112">registar stanja</text>
+  <text class="sm" x="615" y="124">state_reg (23 stanja)</text>
+
+  <rect class="bx" x="556" y="164" width="118" height="42" rx="3"/>
+  <text class="tb" x="615" y="180">logika narednog</text>
+  <text class="tb" x="615" y="192">stanja i izlaza</text>
+  <text class="sm" x="615" y="202">kombinacioni proces</text>
+
+  <path class="w" d="M615,130 L615,162"/>
+  <path class="w" d="M674,180 L688,180 L688,84 L615,84 L615,94"/>
+
+  <rect class="bx" x="556" y="240" width="118" height="34" rx="3"/>
+  <text class="tb" x="615" y="256">brojači</text>
+  <text class="sm" x="615" y="268">y, x, v, u, p</text>
+  <path class="w" d="M615,206 L615,238"/>
+
+  <rect class="bx" x="556" y="300" width="118" height="46" rx="3"/>
+  <text class="tb" x="615" y="316">statusni ulazi</text>
+  <text class="sm" x="615" y="328">dm_done, dn_done</text>
+  <text class="sm" x="615" y="339">den = 0, kraj petlje</text>
+  <path class="w" d="M615,300 L615,282 L615,278"/>
+
+  <rect class="bx" x="556" y="392" width="118" height="46" rx="3"/>
+  <text class="tb" x="615" y="408">spoljni interfejs</text>
+  <text class="sm" x="615" y="420">start → busy, done</text>
+  <text class="sm" x="615" y="431">img_w/h, tmp_w/h</text>
+  <path class="w" d="M615,392 L615,352 L615,348"/>
+
+  <!-- kontrolni signali ka datapath -->
+  <path class="c" d="M556,148 L520,148 L520,74 L502,74"/>
+  <text class="sm" x="522" y="122" text-anchor="start">kontrolni</text>
+  <text class="sm" x="522" y="132" text-anchor="start">signali</text>
+  <path class="c" d="M556,192 L530,192 L530,420 L412,420"/>
+  <path class="c" d="M286,420 L268,420 L268,470 L284,470"/>
+</svg>

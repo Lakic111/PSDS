@@ -168,7 +168,9 @@ def xml_slika(s, rid, dok_id):
 
 
 def main():
-    slike = [os.path.join(SCRATCH, "fig%d.png" % i) for i in (1, 2, 3, 4)]
+    slike = [os.path.join(SCRATCH, "fig%d.png" % i) for i in (1, 2, 3, 4, 5)]
+    # Slika 5 nije SVG nego screenshot block designa iz Vivada -- ide direktno
+    slike.append(os.path.join(os.path.dirname(HTML), "slika_block_design.png"))
     formule = [os.path.join(SCRATCH, "form%d.png" % i) for i in range(1, 8)]
     for s in slike + formule:
         if not os.path.exists(s):
@@ -183,11 +185,11 @@ def main():
     n_p = sum(1 for b in c.blokovi if isinstance(b, Para))
     n_t = sum(1 for b in c.blokovi if isinstance(b, Table))
     n_s = sum(1 for b in c.blokovi if isinstance(b, Slika))
-    print("blokova: %d pasusa, %d tabela, %d slika (4 figure + 7 formula)" % (n_p, n_t, n_s))
-    if n_t != 27:
-        print("UPOZORENJE: ocekivano 27 tabela, nadjeno %d" % n_t)
-    if n_s != 11:
-        raise SystemExit("ocekivane 4 figure + 7 formula = 11, nadjeno %d" % n_s)
+    print("blokova: %d pasusa, %d tabela, %d slika (6 figura + 7 formula)" % (n_p, n_t, n_s))
+    if n_t != 25:
+        print("UPOZORENJE: ocekivano 25 tabela, nadjeno %d" % n_t)
+    if n_s != 13:
+        raise SystemExit("ocekivano 6 figura + 7 formula = 13, nadjeno %d" % n_s)
 
     telo, veze, media, dok_id = [], [], [], 1000
     for b in c.blokovi:

@@ -1,34 +1,3 @@
-// ============================================================================
-//  MESOVITA SIMULACIJA (SystemC ESL + VHDL RTL) -- gornji nivo
-//
-//  Jedna Xcelium simulacija u kojoj rade OBA modela istovremeno:
-//
-//      bram (deljeni)
-//        |-- ncc0 : NCC_Target      -> NCC^2 racuna C++ ESL model (src/ncc.cpp)
-//        |-- ncc1 : NCC_Target_RTL  -> NCC^2 racuna ncc_core.vhd (Korak 5)
-//
-//  CPU (ovaj testbench) upise ISTU sliku i ISTI sablon u BRAM jednom, pa oba
-//  bloka procitaju iste bajtove sa istih adresa i krenu u istom trenutku.
-//  Time se dokaz ne oslanja na poredjenje dva odvojeno snimljena golden fajla
-//  (primedba na dosadasnji pristup), nego na jedan zajednicki run.
-//
-//  STA SE TVRDI, A STA NE:
-//    * TVRDO se proverava vrh: 0x80000000 @ (u=32, v=14) kod OBA bloka.
-//      To je golden iz Koraka 1 (C kernel), potvrdjen u Koraku 4 (VHDL tb) i
-//      na ploci (Korak 9).
-//    * Cela mapa se NE tvrdi kao bit-identicna. C++ model deli u pokretnom
-//      zarezu (src/ncc.cpp: double ncc2 = num_sq/den_prod), RTL celobrojnim
-//      seq_divider-om. Van vrha se najnizi bitovi razilaze po konstrukciji.
-//      Zato se razlike MERE i ispisu (broj identicnih pozicija, najvece
-//      odstupanje), umesto da test na njima puca -- tvrdnja koja bi pukla nije
-//      dokaz nego sum.
-//
-//  Ulazni podaci: seg90.hex / crnitop.hex -- isti pikseli kao seg90.txt i
-//  crnitop.txt iz src/vhdl/tb/, samo u heks formatu (jedan red slike po liniji,
-//  2 heks cifre po pikselu), jer se na ws2 fajlovi prenose klipbordom, a
-//  8100 linija teksta se tako ne prenosi.
-// ============================================================================
-
 #define SC_MAIN
 #include "common.hpp"
 #include "bram.hpp"
@@ -47,8 +16,8 @@ using namespace std;
 
 static const int IW = 90, IH = 90;
 static const int TW = 25, TH = 15;
-static const int RES_W = IW - TW + 1;   // 66
-static const int RES_H = IH - TH + 1;   // 76
+static const int RES_W = IW - TW + 1;
+static const int RES_H = IH - TH + 1;
 
 static const uint32_t GOLDEN_BEST = 0x80000000u;
 static const int      GOLDEN_U    = 32;
@@ -56,8 +25,6 @@ static const int      GOLDEN_V    = 14;
 
 static const uint64_t BRAM_OFF_IMG = 0x00000;
 static const uint64_t BRAM_OFF_TMP = 0x10000;
-
-// ---------------------------------------------------------------------------
 
 class tb_cosim : public sc_module {
 public:
@@ -82,7 +49,7 @@ public:
 private:
     sc_event*       m_done0;
     sc_event*       m_done1;
-    NCC_Target_RTL* m_rtl;      // samo radi citanja busy_cycles metrike
+    NCC_Target_RTL* m_rtl;
 
     bool load_hex(const string& path, vector<uint8_t>& out, int expect_w, int expect_h);
     void bram_write(uint64_t off, vector<uint8_t>& data);
@@ -90,9 +57,6 @@ private:
     void map_read(tlm_utils::simple_initiator_socket<tb_cosim>& s, vector<int32_t>& out);
 };
 
-// Heks format: jedan red slike po liniji, 2 heks cifre po pikselu, bez razmaka.
-// Namerno bez zavisnosti van standardne biblioteke -- ws2 nema internet, pa ni
-// mogucnost da se bilo sta instalira.
 bool tb_cosim::load_hex(const string& path, vector<uint8_t>& out, int expect_w, int expect_h) {
     ifstream f(path.c_str());
     if (!f.is_open()) { cout << "[GRESKA] ne mogu da otvorim " << path << endl; return false; }
@@ -100,7 +64,7 @@ bool tb_cosim::load_hex(const string& path, vector<uint8_t>& out, int expect_w, 
     string line;
     int rows = 0;
     while (getline(f, line)) {
-        // CRLF ako je fajl prosao kroz Windows editor
+
         while (!line.empty() && (line[line.size() - 1] == '\r' || line[line.size() - 1] == '\n'))
             line.erase(line.size() - 1);
         if (line.empty()) continue;
@@ -129,7 +93,7 @@ void tb_cosim::bram_write(uint64_t off, vector<uint8_t>& data) {
     pl.set_data_ptr(data.data());
     pl.set_data_length((unsigned)data.size());
     i_bram->b_transport(pl, d);
-    // Vreme upisa se ne naplacuje: CPU puni BRAM pre starta, van kriticne putanje.
+
 }
 
 void tb_cosim::reg_write(tlm_utils::simple_initiator_socket<tb_cosim>& s,
@@ -165,7 +129,6 @@ void tb_cosim::run() {
     cout << "Ucitano: segment " << IW << "x" << IH
          << ", sablon " << TW << "x" << TH << endl;
 
-    // Jedan upis u deljeni BRAM -> oba bloka citaju iste bajtove.
     bram_write(BRAM_OFF_IMG, img);
     bram_write(BRAM_OFF_TMP, tmpl);
 
@@ -190,13 +153,11 @@ void tb_cosim::run() {
     map_read(i_ncc0, m0);
     map_read(i_ncc1, m1);
 
-    // --- vrh po mapi, za svaki blok posebno ---
     uint32_t best0 = 0, best1 = 0;
     int u0 = -1, v0 = -1, u1 = -1, v1 = -1;
     for (int v = 0; v < RES_H; v++) {
         for (int u = 0; u < RES_W; u++) {
-            // Skorovi se porede kao u32: 0x80000000 je NCC^2 = 1.0, a kao int32
-            // bi bio negativan -- bas najbolji rezultat bi ispao iz maksimuma.
+
             uint32_t a = (uint32_t)m0[v * RES_W + u];
             uint32_t b = (uint32_t)m1[v * RES_W + u];
             if (a > best0) { best0 = a; u0 = u; v0 = v; }
@@ -204,7 +165,6 @@ void tb_cosim::run() {
         }
     }
 
-    // --- razlike po celoj mapi (mere se, ne tvrde) ---
     long long same = 0, maxdiff = 0;
     int mu = -1, mv = -1;
     for (int v = 0; v < RES_H; v++) {
@@ -232,7 +192,6 @@ void tb_cosim::run() {
              << ", v=" << mv << ")  -- ocekivano: ESL deli u double, RTL celobrojno"
              << endl;
 
-    // --- tvrde provere ---
     int fails = 0;
     if (best0 != GOLDEN_BEST || u0 != GOLDEN_U || v0 != GOLDEN_V) {
         cout << "[FAIL] ESL vrh nije golden 0x80000000 @ (32,14)" << endl; fails++;
@@ -257,15 +216,12 @@ void tb_cosim::run() {
     sc_stop();
 }
 
-// ---------------------------------------------------------------------------
-
 int sc_main(int argc, char* argv[]) {
     BRAM_Module    bram("bram");
-    NCC_Target     ncc0("ncc0");     // C++ ESL model (src/ncc.cpp)
-    NCC_Target_RTL ncc1("ncc1");     // VHDL RTL preko sc_foreign_module
+    NCC_Target     ncc0("ncc0");
+    NCC_Target_RTL ncc1("ncc1");
     tb_cosim       tb("tb");
 
-    // Oba bloka su masteri nad ISTIM BRAM-om (multi_passthrough target).
     tb.i_bram.bind(bram.socket);
     ncc0.i_bram.bind(bram.socket);
     ncc1.i_bram.bind(bram.socket);

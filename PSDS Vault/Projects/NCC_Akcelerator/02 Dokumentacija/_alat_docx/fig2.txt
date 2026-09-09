@@ -1,0 +1,2 @@
+1320 1940
+Slika 1b. ASMD dijagram, drugi deo &mdash; stanja S_L_YX_FILL do S_DONE (protočna MAC petlja, deljenje i upis rezultata). Krugovi A&ndash;E odgovaraju istoimenim krugovima na Slici 1a.

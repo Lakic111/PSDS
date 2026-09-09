@@ -1,0 +1,205 @@
+<!doctype html><meta charset='utf-8'><style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #000;
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  p { margin: 0 0 0.55em 0; text-indent: 1.2em; }
+  p.noind, li p { text-indent: 0; }
+
+  h1 {
+    font-size: 15pt; font-weight: bold; margin: 0 0 0.9em 0;
+    page-break-before: always; page-break-after: avoid;
+  }
+  h1.first { page-break-before: avoid; }
+  h2 { font-size: 12.5pt; margin: 1.3em 0 0.5em 0; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 1.1em 0 0.4em 0; page-break-after: avoid; }
+
+  /* ---------- naslovna ---------- */
+  .cover { page-break-after: always; text-align: center; padding-top: 45mm; }
+  .cover .fac { font-size: 12pt; letter-spacing: .02em; }
+  .cover .subj { font-size: 13pt; margin-top: 26mm; font-variant: small-caps; }
+  .cover .title {
+    font-size: 21pt; font-weight: bold; margin: 8mm 14mm 0 14mm; line-height: 1.3;
+  }
+  .cover .sub { font-size: 13pt; margin-top: 6mm; }
+  .cover .rule { border-top: 1.4pt solid #000; width: 70%; margin: 9mm auto; }
+  .cover .meta { font-size: 12pt; margin-top: 20mm; line-height: 1.9; }
+  .cover .foot { margin-top: 34mm; font-size: 11pt; }
+
+  /* ---------- sadrzaj ---------- */
+  .toc { page-break-after: always; }
+  .toc h1 { text-align: center; page-break-before: avoid; }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0.18em 0; text-align: left; }
+  .toc li.l1 { font-weight: bold; margin-top: 0.7em; }
+  .toc li.l2 { padding-left: 1.6em; font-size: 11pt; }
+  .toc li.l3 { padding-left: 3.2em; font-size: 10.5pt; }
+
+  /* ---------- tabele ---------- */
+  table {
+    border-collapse: collapse; width: 100%; margin: 0.7em 0 0.25em 0;
+    font-size: 10pt; page-break-inside: avoid;
+  }
+  caption { caption-side: bottom; font-size: 9.5pt; font-style: italic;
+            padding-top: 0.4em; text-align: center; }
+  caption b { font-style: normal; }
+  th, td { padding: 3.5px 7px; text-align: left; vertical-align: top; }
+  thead th { border-top: 1.1pt solid #000; border-bottom: 0.7pt solid #000;
+             font-weight: bold; text-align: center; }
+  tbody tr:last-child td { border-bottom: 1.1pt solid #000; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td.c, th.c { text-align: center; }
+  tbody tr.sep td { border-top: 0.4pt solid #999; }
+
+  /* ---------- kod / formule ---------- */
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9.6pt; }
+  pre {
+    font-family: Consolas, "Courier New", monospace; font-size: 9.2pt;
+    line-height: 1.32; background: #f6f6f4; border: 0.5pt solid #ccc;
+    padding: 7px 9px; margin: 0.6em 0; overflow-x: auto;
+    page-break-inside: avoid; text-align: left; white-space: pre;
+  }
+  .formula {
+    text-align: center; margin: 0.9em 0; font-size: 12pt; font-style: italic;
+    page-break-inside: avoid;
+  }
+  .formula .frac { display: inline-block; vertical-align: middle; text-align: center; }
+  .formula .frac > .num { display: block; padding: 0 .5em 2px .5em; border-bottom: 1pt solid #000; }
+  .formula .frac > .den { display: block; padding: 2px .5em 0 .5em; }
+  /* kvadratni koren koji se rasteže preko celog potkorenog izraza */
+  .sqrt { display: inline-flex; align-items: stretch; }
+  .sqrt > svg { width: .62em; height: auto; align-self: stretch; margin-right: 1px; overflow: visible; }
+  .sqrt > .radicand { border-top: 1.15pt solid #000; padding: 2px 3px 0 2px; }
+
+  /* ---------- figure ---------- */
+  figure { margin: 1em 0 0.4em 0; text-align: center; page-break-inside: avoid; }
+  figcaption { font-size: 9.5pt; font-style: italic; margin-top: 0.45em; text-align: center; }
+  figcaption b { font-style: normal; }
+  svg { max-width: 100%; height: auto; }
+  /* Visoke slike: ograniči visinu tako da slika i potpis stanu na istu stranu. */
+  figure.tall { page-break-before: always; }
+  figure.tall svg { max-height: 236mm; width: auto; }
+
+  .note {
+    border-left: 2.5pt solid #555; background: #f4f4f2;
+    padding: 6px 11px; margin: 0.8em 0; font-size: 10.3pt;
+    page-break-inside: avoid;
+  }
+  .note p { text-indent: 0; margin: 0 0 .35em 0; }
+  .note p:last-child { margin-bottom: 0; }
+
+  ul.plain, ol.plain { margin: 0.4em 0 0.7em 0; padding-left: 1.5em; }
+  ul.plain li, ol.plain li { margin-bottom: 0.28em; }
+
+  .kv { font-variant-numeric: tabular-nums; }
+  .ok  { font-weight: bold; }
+
+html,body{margin:0;padding:0;background:#fff}</style><svg width="1400" height="500" viewBox="0 0 700 250" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <style>
+    .lbl { font-size:10.5px; }
+    .hd  { font-size:10.5px; font-weight:bold; }
+    .cel { stroke:#000; stroke-width:.9; }
+    .a   { fill:#dfe6ef; }
+    .b   { fill:#eee6d8; }
+    .txt { font-size:9.4px; font-family:Consolas,monospace; }
+    .gl  { stroke:#bbb; stroke-width:.7; }
+    .st2 { font-size:9.5px; fill:#555; }
+  </style>
+
+  <!-- takt zaglavlje -->
+  <text class="hd" x="10" y="24">takt</text>
+  <g>
+    <text class="hd" x="140" y="24" text-anchor="middle">t0</text>
+    <text class="hd" x="212" y="24" text-anchor="middle">t1</text>
+    <text class="hd" x="284" y="24" text-anchor="middle">t2</text>
+    <text class="hd" x="356" y="24" text-anchor="middle">t3</text>
+    <text class="hd" x="428" y="24" text-anchor="middle">…</text>
+    <text class="hd" x="500" y="24" text-anchor="middle">tN-1</text>
+    <text class="hd" x="572" y="24" text-anchor="middle">tN</text>
+    <text class="hd" x="644" y="24" text-anchor="middle">tN+1</text>
+  </g>
+  <line class="gl" x1="104" y1="30" x2="680" y2="30"/>
+
+  <!-- stanje -->
+  <text class="hd" x="10" y="52">stanje</text>
+  <rect class="cel" x="104" y="38" width="72" height="22" fill="#f0f0ee"/>
+  <text class="txt" x="140" y="53" text-anchor="middle">FILL</text>
+  <rect class="cel" x="176" y="38" width="288" height="22" fill="#f0f0ee"/>
+  <text class="txt" x="320" y="53" text-anchor="middle">RUN  (ponavlja se N−1 puta)</text>
+  <rect class="cel" x="464" y="38" width="72" height="22" fill="#f0f0ee"/>
+  <text class="txt" x="500" y="53" text-anchor="middle">RUN</text>
+  <rect class="cel" x="536" y="38" width="72" height="22" fill="#f0f0ee"/>
+  <text class="txt" x="572" y="53" text-anchor="middle">DRAIN</text>
+  <rect class="cel" x="608" y="38" width="72" height="22" fill="#f0f0ee"/>
+  <text class="txt" x="644" y="53" text-anchor="middle">DRAIN2</text>
+
+  <!-- izdavanje adrese -->
+  <text class="hd" x="10" y="92">izdaje adresu</text>
+  <rect class="cel a" x="104" y="78" width="72" height="22"/>
+  <text class="txt" x="140" y="93" text-anchor="middle">px 0</text>
+  <rect class="cel a" x="176" y="78" width="72" height="22"/>
+  <text class="txt" x="212" y="93" text-anchor="middle">px 1</text>
+  <rect class="cel a" x="248" y="78" width="72" height="22"/>
+  <text class="txt" x="284" y="93" text-anchor="middle">px 2</text>
+  <rect class="cel a" x="320" y="78" width="72" height="22"/>
+  <text class="txt" x="356" y="93" text-anchor="middle">px 3</text>
+  <rect class="cel a" x="392" y="78" width="72" height="22"/>
+  <text class="txt" x="428" y="93" text-anchor="middle">…</text>
+  <rect class="cel a" x="464" y="78" width="72" height="22"/>
+  <text class="txt" x="500" y="93" text-anchor="middle">px N−1</text>
+  <rect class="cel" x="536" y="78" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="572" y="93" text-anchor="middle">—</text>
+  <rect class="cel" x="608" y="78" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="644" y="93" text-anchor="middle">—</text>
+
+  <!-- registruje df/dt -->
+  <text class="hd" x="10" y="132">registruje df/dt</text>
+  <rect class="cel" x="104" y="118" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="140" y="133" text-anchor="middle">—</text>
+  <rect class="cel a" x="176" y="118" width="72" height="22"/>
+  <text class="txt" x="212" y="133" text-anchor="middle">px 0</text>
+  <rect class="cel a" x="248" y="118" width="72" height="22"/>
+  <text class="txt" x="284" y="133" text-anchor="middle">px 1</text>
+  <rect class="cel a" x="320" y="118" width="72" height="22"/>
+  <text class="txt" x="356" y="133" text-anchor="middle">px 2</text>
+  <rect class="cel a" x="392" y="118" width="72" height="22"/>
+  <text class="txt" x="428" y="133" text-anchor="middle">…</text>
+  <rect class="cel a" x="464" y="118" width="72" height="22"/>
+  <text class="txt" x="500" y="133" text-anchor="middle">px N−2</text>
+  <rect class="cel a" x="536" y="118" width="72" height="22"/>
+  <text class="txt" x="572" y="133" text-anchor="middle">px N−1</text>
+  <rect class="cel" x="608" y="118" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="644" y="133" text-anchor="middle">—</text>
+
+  <!-- akumulacija -->
+  <text class="hd" x="10" y="172">akumulira</text>
+  <rect class="cel" x="104" y="158" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="140" y="173" text-anchor="middle">—</text>
+  <rect class="cel" x="176" y="158" width="72" height="22" fill="#fafafa"/>
+  <text class="txt" x="212" y="173" text-anchor="middle">—</text>
+  <rect class="cel b" x="248" y="158" width="72" height="22"/>
+  <text class="txt" x="284" y="173" text-anchor="middle">px 0</text>
+  <rect class="cel b" x="320" y="158" width="72" height="22"/>
+  <text class="txt" x="356" y="173" text-anchor="middle">px 1</text>
+  <rect class="cel b" x="392" y="158" width="72" height="22"/>
+  <text class="txt" x="428" y="173" text-anchor="middle">…</text>
+  <rect class="cel b" x="464" y="158" width="72" height="22"/>
+  <text class="txt" x="500" y="173" text-anchor="middle">px N−3</text>
+  <rect class="cel b" x="536" y="158" width="72" height="22"/>
+  <text class="txt" x="572" y="173" text-anchor="middle">px N−2</text>
+  <rect class="cel b" x="608" y="158" width="72" height="22"/>
+  <text class="txt" x="644" y="173" text-anchor="middle">px N−1</text>
+
+  <text class="st2" x="104" y="204">Ukupno: N + 2 takta za N piksela (jedan takt po pikselu + dva takta režije).</text>
+  <text class="st2" x="104" y="220">Bez protočnosti bi bilo 2N taktova — ušteda blizu 50 % ukupne latencije jezgra.</text>
+</svg>

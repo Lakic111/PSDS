@@ -1,0 +1,254 @@
+<!doctype html><meta charset='utf-8'><style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #000;
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  p { margin: 0 0 0.55em 0; text-indent: 1.2em; }
+  p.noind, li p { text-indent: 0; }
+
+  h1 {
+    font-size: 15pt; font-weight: bold; margin: 0 0 0.9em 0;
+    page-break-before: always; page-break-after: avoid;
+  }
+  h1.first { page-break-before: avoid; }
+  h2 { font-size: 12.5pt; margin: 1.3em 0 0.5em 0; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 1.1em 0 0.4em 0; page-break-after: avoid; }
+
+  /* ---------- naslovna ---------- */
+  .cover { page-break-after: always; text-align: center; padding-top: 45mm; }
+  .cover .fac { font-size: 12pt; letter-spacing: .02em; }
+  .cover .subj { font-size: 13pt; margin-top: 26mm; font-variant: small-caps; }
+  .cover .title {
+    font-size: 21pt; font-weight: bold; margin: 8mm 14mm 0 14mm; line-height: 1.3;
+  }
+  .cover .sub { font-size: 13pt; margin-top: 6mm; }
+  .cover .rule { border-top: 1.4pt solid #000; width: 70%; margin: 9mm auto; }
+  .cover .meta { font-size: 12pt; margin-top: 20mm; line-height: 1.9; }
+  .cover .foot { margin-top: 34mm; font-size: 11pt; }
+
+  /* ---------- sadrzaj ---------- */
+  .toc { page-break-after: always; }
+  .toc h1 { text-align: center; page-break-before: avoid; }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0.18em 0; text-align: left; }
+  .toc li.l1 { font-weight: bold; margin-top: 0.7em; }
+  .toc li.l2 { padding-left: 1.6em; font-size: 11pt; }
+  .toc li.l3 { padding-left: 3.2em; font-size: 10.5pt; }
+
+  /* ---------- tabele ---------- */
+  table {
+    border-collapse: collapse; width: 100%; margin: 0.7em 0 0.25em 0;
+    font-size: 10pt; page-break-inside: avoid;
+  }
+  caption { caption-side: bottom; font-size: 9.5pt; font-style: italic;
+            padding-top: 0.4em; text-align: center; }
+  caption b { font-style: normal; }
+  th, td { padding: 3.5px 7px; text-align: left; vertical-align: top; }
+  thead th { border-top: 1.1pt solid #000; border-bottom: 0.7pt solid #000;
+             font-weight: bold; text-align: center; }
+  tbody tr:last-child td { border-bottom: 1.1pt solid #000; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td.c, th.c { text-align: center; }
+  tbody tr.sep td { border-top: 0.4pt solid #999; }
+
+  /* ---------- kod / formule ---------- */
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9.6pt; }
+  pre {
+    font-family: Consolas, "Courier New", monospace; font-size: 9.2pt;
+    line-height: 1.32; background: #f6f6f4; border: 0.5pt solid #ccc;
+    padding: 7px 9px; margin: 0.6em 0; overflow-x: auto;
+    page-break-inside: avoid; text-align: left; white-space: pre;
+  }
+  .formula {
+    text-align: center; margin: 0.9em 0; font-size: 12pt; font-style: italic;
+    page-break-inside: avoid;
+  }
+  .formula .frac { display: inline-block; vertical-align: middle; text-align: center; }
+  .formula .frac > .num { display: block; padding: 0 .5em 2px .5em; border-bottom: 1pt solid #000; }
+  .formula .frac > .den { display: block; padding: 2px .5em 0 .5em; }
+  /* kvadratni koren koji se rasteže preko celog potkorenog izraza */
+  .sqrt { display: inline-flex; align-items: stretch; }
+  .sqrt > svg { width: .62em; height: auto; align-self: stretch; margin-right: 1px; overflow: visible; }
+  .sqrt > .radicand { border-top: 1.15pt solid #000; padding: 2px 3px 0 2px; }
+
+  /* ---------- figure ---------- */
+  figure { margin: 1em 0 0.4em 0; text-align: center; page-break-inside: avoid; }
+  figcaption { font-size: 9.5pt; font-style: italic; margin-top: 0.45em; text-align: center; }
+  figcaption b { font-style: normal; }
+  svg { max-width: 100%; height: auto; }
+  /* Visoke slike: ograniči visinu tako da slika i potpis stanu na istu stranu. */
+  figure.tall { page-break-before: always; }
+  figure.tall svg { max-height: 236mm; width: auto; }
+
+  .note {
+    border-left: 2.5pt solid #555; background: #f4f4f2;
+    padding: 6px 11px; margin: 0.8em 0; font-size: 10.3pt;
+    page-break-inside: avoid;
+  }
+  .note p { text-indent: 0; margin: 0 0 .35em 0; }
+  .note p:last-child { margin-bottom: 0; }
+
+  ul.plain, ol.plain { margin: 0.4em 0 0.7em 0; padding-left: 1.5em; }
+  ul.plain li, ol.plain li { margin-bottom: 0.28em; }
+
+  .kv { font-variant-numeric: tabular-nums; }
+  .ok  { font-weight: bold; }
+
+html,body{margin:0;padding:0;background:#fff}</style><svg width="1320" height="1940" viewBox="0 0 660 970" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#000"/>
+    </marker>
+  </defs>
+  <style>
+    .st { fill:#fff; stroke:#000; stroke-width:1.1; }
+    .gp { fill:none; stroke:#000; stroke-width:1; stroke-dasharray:4 3; }
+    .nm { font-size:9px; }
+    .op { font-size:8.6px; fill:#000; }
+    .lb { font-size:9px; fill:#000; }
+    .ln { stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+    .lnd{ stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+  </style>
+
+  <path class="ln" d="M200,23 L200,44"/>
+  <circle cx="200" cy="14" r="9" class="st"/>
+  <text class="nm" x="200" y="17" text-anchor="middle">A</text>
+  <circle cx="490" cy="806" r="9" class="st"/>
+  <text class="nm" x="490" y="809" text-anchor="middle">B</text>
+  <circle cx="600" cy="871" r="9" class="st"/>
+  <text class="nm" x="600" y="874" text-anchor="middle">C</text>
+  <circle cx="30" cy="910" r="9" class="st"/>
+  <text class="nm" x="30" y="913" text-anchor="middle">D</text>
+  <circle cx="30" cy="937" r="9" class="st"/>
+  <text class="nm" x="30" y="940" text-anchor="middle">E</text>
+  <!-- BLOK 15: S_L_YX_FILL -->
+  <rect class="gp" x="82" y="32" width="236" height="88"/>
+  <rect class="st" x="88" y="44" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="42" text-anchor="start">S_L_YX_FILL</text>
+  <text class="op" x="200" y="57" text-anchor="middle" font-size="7.8">img_addr_o &lt;= v&middot;img_w + u ; templ_addr_o &lt;= 0<tspan x="200" dy="9.8">mac_v &lt;= 0</tspan></text>
+  <path class="ln" d="M200,74 L200,86"/>
+  <path class="st" d="M170,86 L230,86 L250,100 L230,114 L170,114 L150,100 z"/>
+  <text class="lb" x="200" y="103" text-anchor="middle" font-size="7.6">tmp_w = tmp_h = 1</text>
+  <path class="lnd" d="M150,100 L70,100 L70,366 L88,366"/>
+  <text class="lb" x="146" y="94" text-anchor="end">T</text>
+  <path class="ln" d="M200,114 L200,134"/>
+  <text class="lb" x="236" y="118" text-anchor="start">F</text>
+
+  <!-- BLOK 16: S_L_YX_RUN -->
+  <rect class="gp" x="82" y="122" width="236" height="212"/>
+  <rect class="st" x="88" y="134" width="224" height="54" rx="0"/>
+  <text class="nm" x="86" y="132" text-anchor="start">S_L_YX_RUN</text>
+  <text class="op" x="200" y="145" text-anchor="middle" font-size="7.4">df &lt;= img_data_i &minus; f_bar<tspan x="200" dy="9.4">dt &lt;= templ_data_i &minus; template_mean</tspan><tspan x="200" dy="9.4">mac_v &lt;= 1</tspan><tspan x="200" dy="9.4">img_addr_o &lt;= (v+y)&middot;img_w + (u+x)</tspan><tspan x="200" dy="9.4">templ_addr_o &lt;= y&middot;tmp_w + x</tspan></text>
+  <path class="ln" d="M200,188 L200,200"/>
+  <path class="st" d="M170,200 L230,200 L250,214 L230,228 L170,228 L150,214 z"/>
+  <text class="lb" x="200" y="217" text-anchor="middle">mac_v = 1</text>
+  <path class="lnd" d="M250,214 L336,214 L336,288 L206,288"/>
+  <text class="lb" x="334" y="210" text-anchor="end">F</text>
+  <path class="ln" d="M200,228 L200,240"/>
+  <text class="lb" x="236" y="237" text-anchor="start">T</text>
+  <rect class="st" x="88" y="240" width="224" height="36" rx="18"/>
+  <text class="op" x="200" y="252" text-anchor="middle" font-size="7.4">sum_num &lt;= sum_num + df&middot;dt<tspan x="200" dy="9.4">sum_den_f &lt;= sum_den_f + df&sup2;</tspan><tspan x="200" dy="9.4">sum_den_t &lt;= sum_den_t + dt&sup2;</tspan></text>
+  <path class="ln" d="M200,276 L200,300"/>
+  <path class="st" d="M170,300 L230,300 L250,314 L230,328 L170,328 L150,314 z"/>
+  <text class="lb" x="200" y="317" text-anchor="middle">nije kraj</text>
+  <path class="lnd" d="M250,314 L350,314 L350,161 L312,161"/>
+  <text class="lb" x="348" y="308" text-anchor="end">T</text>
+  <path class="ln" d="M200,328 L200,348"/>
+  <text class="lb" x="236" y="332" text-anchor="start">F</text>
+
+  <!-- BLOK 17: S_L_YX_DRAIN -->
+  <rect class="gp" x="82" y="336" width="236" height="142"/>
+  <rect class="st" x="88" y="348" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="346" text-anchor="start">S_L_YX_DRAIN</text>
+  <text class="op" x="200" y="360" text-anchor="middle" font-size="7.4">df &lt;= img_data_i &minus; f_bar<tspan x="200" dy="9.4">dt &lt;= templ_data_i &minus; template_mean</tspan><tspan x="200" dy="9.4">mac_v &lt;= 1</tspan></text>
+  <path class="ln" d="M200,384 L200,396"/>
+  <path class="st" d="M170,396 L230,396 L250,410 L230,424 L170,424 L150,410 z"/>
+  <text class="lb" x="200" y="413" text-anchor="middle">mac_v = 1</text>
+  <path class="lnd" d="M250,410 L336,410 L336,484 L206,484"/>
+  <text class="lb" x="334" y="406" text-anchor="end">F</text>
+  <path class="ln" d="M200,424 L200,436"/>
+  <text class="lb" x="236" y="433" text-anchor="start">T</text>
+  <rect class="st" x="88" y="436" width="224" height="36" rx="18"/>
+  <text class="op" x="200" y="448" text-anchor="middle" font-size="7.4">sum_num &lt;= sum_num + df&middot;dt<tspan x="200" dy="9.4">sum_den_f &lt;= sum_den_f + df&sup2;</tspan><tspan x="200" dy="9.4">sum_den_t &lt;= sum_den_t + dt&sup2;</tspan></text>
+  <path class="ln" d="M200,472 L200,492"/>
+
+  <!-- BLOK 18: S_L_YX_DRAIN2 -->
+  <rect class="gp" x="82" y="480" width="236" height="54"/>
+  <rect class="st" x="88" y="492" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="490" text-anchor="start">S_L_YX_DRAIN2</text>
+  <text class="op" x="200" y="504" text-anchor="middle" font-size="7.4">sum_num &lt;= sum_num + df&middot;dt ; mac_v &lt;= 0<tspan x="200" dy="9.4">sum_den_f &lt;= sum_den_f + df&sup2;</tspan><tspan x="200" dy="9.4">sum_den_t &lt;= sum_den_t + dt&sup2;</tspan></text>
+  <path class="ln" d="M200,528 L200,548"/>
+
+  <!-- BLOK 19: S_NCC_SQ -->
+  <rect class="gp" x="82" y="536" width="383" height="122"/>
+  <text class="nm" x="86" y="546" text-anchor="start">S_NCC_SQ</text>
+  <rect class="st" x="88" y="548" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="562" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,570 L200,582"/>
+  <path class="st" d="M170,582 L230,582 L250,596 L230,610 L170,610 L150,596 z"/>
+  <text class="lb" x="200" y="595" text-anchor="middle">sum_den_f = 0<tspan x="200" dy="9">or sum_den_t = 0</tspan></text>
+  <path class="ln" d="M250,596 L330,596"/>
+  <text class="lb" x="290" y="590" text-anchor="middle">T</text>
+  <rect class="st" x="330" y="585" width="125" height="22" rx="11"/>
+  <text class="op" x="392" y="600" text-anchor="middle">result_q &lt;= 0</text>
+  <path class="lnd" d="M392,607 L392,828 L330,828 L330,868 L312,868"/>
+  <path class="ln" d="M200,610 L200,622"/>
+  <text class="lb" x="236" y="619" text-anchor="start">F</text>
+  <rect class="st" x="88" y="622" width="224" height="30" rx="15"/>
+  <text class="op" x="200" y="636" text-anchor="middle">num_sq &lt;= sum_num&sup2;<tspan x="200" dy="11">den_prod &lt;= sum_den_f &middot; sum_den_t</tspan></text>
+  <path class="ln" d="M200,652 L200,672"/>
+
+  <!-- BLOK 20: S_NCC_DIV -->
+  <rect class="gp" x="82" y="660" width="236" height="54"/>
+  <rect class="st" x="88" y="672" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="670" text-anchor="start">S_NCC_DIV</text>
+  <text class="op" x="200" y="683" text-anchor="middle" font-size="7.6">dn_dividend &lt;= num_sq &lt;&lt; 31<tspan x="200" dy="9.6">dn_divisor &lt;= den_prod</tspan><tspan x="200" dy="9.6">dn_start &lt;= 1</tspan></text>
+  <path class="ln" d="M200,708 L200,728"/>
+
+  <!-- BLOK 21: S_NCC_WAIT -->
+  <rect class="gp" x="82" y="716" width="236" height="122"/>
+  <text class="nm" x="86" y="726" text-anchor="start">S_NCC_WAIT</text>
+  <rect class="st" x="88" y="728" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="742" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,750 L200,762"/>
+  <path class="st" d="M170,762 L230,762 L250,776 L230,790 L170,790 L150,776 z"/>
+  <text class="lb" x="200" y="779" text-anchor="middle">dn_done = 1</text>
+  <path class="lnd" d="M250,776 L344,776 L344,722 L206,722"/>
+  <text class="lb" x="342" y="772" text-anchor="end">F</text>
+  <path class="ln" d="M200,790 L200,802"/>
+  <text class="lb" x="236" y="799" text-anchor="start">T</text>
+  <rect class="st" x="88" y="802" width="224" height="30" rx="15"/>
+  <text class="op" x="200" y="820" text-anchor="middle">result_q &lt;= dn_quot</text>
+  <path class="ln" d="M200,832 L200,852"/>
+
+  <!-- BLOK 22: S_WRITE_RESULT -->
+  <rect class="gp" x="82" y="840" width="236" height="90"/>
+  <rect class="st" x="88" y="852" width="224" height="32" rx="0"/>
+  <text class="nm" x="86" y="850" text-anchor="start">S_WRITE_RESULT</text>
+  <text class="op" x="200" y="871" text-anchor="middle">result_map[v&middot;res_w+u] &lt;= result_q</text>
+  <path class="ln" d="M200,884 L200,896"/>
+  <path class="st" d="M170,896 L230,896 L250,910 L230,924 L170,924 L150,910 z"/>
+  <text class="lb" x="200" y="913" text-anchor="middle">u+1 &lt; res_w</text>
+  <path class="lnd" d="M150,910 L39,910"/>
+  <text class="lb" x="54" y="226" text-anchor="end">T</text>
+  <path class="lnd" d="M200,924 L200,937 L39,937"/>
+  <text class="lb" x="120" y="948" text-anchor="middle">F (novi red, v++)</text>
+
+  <!-- BLOK 23: S_DONE (dostiže se iz D3, ne(v&ge;res_h)) -->
+  <rect class="gp" x="354" y="844" width="152" height="48"/>
+  <rect class="st" x="360" y="856" width="140" height="30" rx="0"/>
+  <text class="nm" x="358" y="854" text-anchor="start">S_DONE</text>
+  <text class="op" x="430" y="874" text-anchor="middle">busy&lt;=0 ; done&lt;=1</text>
+  <path class="lnd" d="M500,871 L591,871"/>
+  <path class="lnd" d="M490,815 L490,836 L430,836 L430,856"/>
+</svg>

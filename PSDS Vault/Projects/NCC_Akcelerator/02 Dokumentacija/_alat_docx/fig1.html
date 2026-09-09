@@ -1,0 +1,286 @@
+<!doctype html><meta charset='utf-8'><style>
+  @page { size: A4; margin: 20mm 18mm 18mm 18mm; }
+
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body {
+    font-family: "Times New Roman", Times, serif;
+    font-size: 11.5pt;
+    line-height: 1.45;
+    color: #000;
+    margin: 0;
+    text-align: justify;
+    hyphens: auto;
+  }
+
+  p { margin: 0 0 0.55em 0; text-indent: 1.2em; }
+  p.noind, li p { text-indent: 0; }
+
+  h1 {
+    font-size: 15pt; font-weight: bold; margin: 0 0 0.9em 0;
+    page-break-before: always; page-break-after: avoid;
+  }
+  h1.first { page-break-before: avoid; }
+  h2 { font-size: 12.5pt; margin: 1.3em 0 0.5em 0; page-break-after: avoid; }
+  h3 { font-size: 11.5pt; margin: 1.1em 0 0.4em 0; page-break-after: avoid; }
+
+  /* ---------- naslovna ---------- */
+  .cover { page-break-after: always; text-align: center; padding-top: 45mm; }
+  .cover .fac { font-size: 12pt; letter-spacing: .02em; }
+  .cover .subj { font-size: 13pt; margin-top: 26mm; font-variant: small-caps; }
+  .cover .title {
+    font-size: 21pt; font-weight: bold; margin: 8mm 14mm 0 14mm; line-height: 1.3;
+  }
+  .cover .sub { font-size: 13pt; margin-top: 6mm; }
+  .cover .rule { border-top: 1.4pt solid #000; width: 70%; margin: 9mm auto; }
+  .cover .meta { font-size: 12pt; margin-top: 20mm; line-height: 1.9; }
+  .cover .foot { margin-top: 34mm; font-size: 11pt; }
+
+  /* ---------- sadrzaj ---------- */
+  .toc { page-break-after: always; }
+  .toc h1 { text-align: center; page-break-before: avoid; }
+  .toc ul { list-style: none; margin: 0; padding: 0; }
+  .toc li { margin: 0.18em 0; text-align: left; }
+  .toc li.l1 { font-weight: bold; margin-top: 0.7em; }
+  .toc li.l2 { padding-left: 1.6em; font-size: 11pt; }
+  .toc li.l3 { padding-left: 3.2em; font-size: 10.5pt; }
+
+  /* ---------- tabele ---------- */
+  table {
+    border-collapse: collapse; width: 100%; margin: 0.7em 0 0.25em 0;
+    font-size: 10pt; page-break-inside: avoid;
+  }
+  caption { caption-side: bottom; font-size: 9.5pt; font-style: italic;
+            padding-top: 0.4em; text-align: center; }
+  caption b { font-style: normal; }
+  th, td { padding: 3.5px 7px; text-align: left; vertical-align: top; }
+  thead th { border-top: 1.1pt solid #000; border-bottom: 0.7pt solid #000;
+             font-weight: bold; text-align: center; }
+  tbody tr:last-child td { border-bottom: 1.1pt solid #000; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  td.c, th.c { text-align: center; }
+  tbody tr.sep td { border-top: 0.4pt solid #999; }
+
+  /* ---------- kod / formule ---------- */
+  code, .mono { font-family: Consolas, "Courier New", monospace; font-size: 9.6pt; }
+  pre {
+    font-family: Consolas, "Courier New", monospace; font-size: 9.2pt;
+    line-height: 1.32; background: #f6f6f4; border: 0.5pt solid #ccc;
+    padding: 7px 9px; margin: 0.6em 0; overflow-x: auto;
+    page-break-inside: avoid; text-align: left; white-space: pre;
+  }
+  .formula {
+    text-align: center; margin: 0.9em 0; font-size: 12pt; font-style: italic;
+    page-break-inside: avoid;
+  }
+  .formula .frac { display: inline-block; vertical-align: middle; text-align: center; }
+  .formula .frac > .num { display: block; padding: 0 .5em 2px .5em; border-bottom: 1pt solid #000; }
+  .formula .frac > .den { display: block; padding: 2px .5em 0 .5em; }
+  /* kvadratni koren koji se rasteže preko celog potkorenog izraza */
+  .sqrt { display: inline-flex; align-items: stretch; }
+  .sqrt > svg { width: .62em; height: auto; align-self: stretch; margin-right: 1px; overflow: visible; }
+  .sqrt > .radicand { border-top: 1.15pt solid #000; padding: 2px 3px 0 2px; }
+
+  /* ---------- figure ---------- */
+  figure { margin: 1em 0 0.4em 0; text-align: center; page-break-inside: avoid; }
+  figcaption { font-size: 9.5pt; font-style: italic; margin-top: 0.45em; text-align: center; }
+  figcaption b { font-style: normal; }
+  svg { max-width: 100%; height: auto; }
+  /* Visoke slike: ograniči visinu tako da slika i potpis stanu na istu stranu. */
+  figure.tall { page-break-before: always; }
+  figure.tall svg { max-height: 236mm; width: auto; }
+
+  .note {
+    border-left: 2.5pt solid #555; background: #f4f4f2;
+    padding: 6px 11px; margin: 0.8em 0; font-size: 10.3pt;
+    page-break-inside: avoid;
+  }
+  .note p { text-indent: 0; margin: 0 0 .35em 0; }
+  .note p:last-child { margin-bottom: 0; }
+
+  ul.plain, ol.plain { margin: 0.4em 0 0.7em 0; padding-left: 1.5em; }
+  ul.plain li, ol.plain li { margin-bottom: 0.28em; }
+
+  .kv { font-variant-numeric: tabular-nums; }
+  .ok  { font-weight: bold; }
+
+html,body{margin:0;padding:0;background:#fff}</style><svg width="1320" height="2340" viewBox="0 0 660 1170" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="ah" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 z" fill="#000"/>
+    </marker>
+  </defs>
+  <style>
+    .st { fill:#fff; stroke:#000; stroke-width:1.1; }
+    .gp { fill:none; stroke:#000; stroke-width:1; stroke-dasharray:4 3; }
+    .nm { font-size:9px; }
+    .op { font-size:8.6px; fill:#000; }
+    .lb { font-size:9px; fill:#000; }
+    .ln { stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+    .lnd{ stroke:#000; stroke-width:1.1; fill:none; marker-end:url(#ah); }
+  </style>
+
+  <!-- RESET -->
+  <path class="ln" d="M200,8 L200,44"/>
+  <text class="lb" x="194" y="18" text-anchor="end">reset</text>
+
+  <!-- BLOK 1: S_IDLE -->
+  <rect class="gp" x="82" y="32" width="236" height="136"/>
+  <text class="nm" x="86" y="42" text-anchor="start">S_IDLE</text>
+  <rect class="st" x="88" y="44" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="58" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,66 L200,78"/>
+  <path class="st" d="M170,78 L230,78 L250,92 L230,106 L170,106 L150,92 z"/>
+  <text class="lb" x="200" y="95" text-anchor="middle">start = 1</text>
+  <path class="lnd" d="M250,92 L340,92 L340,38 L206,38"/>
+  <text class="lb" x="338" y="88" text-anchor="end">F</text>
+  <path class="ln" d="M200,106 L200,118"/>
+  <text class="lb" x="236" y="115" text-anchor="start">T</text>
+  <rect class="st" x="88" y="118" width="224" height="44" rx="15"/>
+  <text class="op" x="200" y="129" text-anchor="middle" font-size="7.4">img_w, img_h, tmp_w, tmp_h &lt;= ulazni portovi<tspan x="200" dy="9.4">res_w &lt;= img_w &minus; tmp_w + 1</tspan><tspan x="200" dy="9.4">res_h &lt;= img_h &minus; tmp_h + 1</tspan><tspan x="200" dy="9.4">y, x &lt;= 0 ; row_sum &lt;= 0 ; busy &lt;= 1</tspan></text>
+  <path class="ln" d="M200,162 L200,182"/>
+
+  <!-- BLOK 2: S_LOAD_IMG_ADDR -->
+  <rect class="gp" x="82" y="170" width="236" height="48"/>
+  <rect class="st" x="88" y="182" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="180" text-anchor="start">S_LOAD_IMG_ADDR</text>
+  <text class="op" x="200" y="195" text-anchor="middle" font-size="8.2">img_addr_o &lt;= y&middot;img_w + x<tspan x="200" dy="10.2">sat_rd_addr &lt;= y&middot;SAT_W + (x+1)</tspan></text>
+  <path class="ln" d="M200,212 L200,232"/>
+
+  <!-- BLOK 3: S_LOAD_IMG_DATA -->
+  <rect class="gp" x="82" y="220" width="236" height="90"/>
+  <rect class="st" x="88" y="232" width="224" height="32" rx="0"/>
+  <text class="nm" x="86" y="230" text-anchor="start">S_LOAD_IMG_DATA</text>
+  <text class="op" x="200" y="242" text-anchor="middle" font-size="7.0">x = 0 :  row_sum &lt;= img_data_i<tspan x="200" dy="9.0">x &gt; 0 :  row_sum &lt;= row_sum + img_data_i</tspan><tspan x="200" dy="9.0">SAT[y+1][x+1] &lt;= SAT[y][x+1] + row_sum</tspan></text>
+  <path class="ln" d="M200,264 L200,276"/>
+  <path class="st" d="M170,276 L230,276 L250,290 L230,304 L170,304 L150,290 z"/>
+  <text class="lb" x="200" y="289" text-anchor="middle">x+1 &lt; img_w<tspan x="200" dy="9">or y+1 &lt; img_h</tspan></text>
+  <path class="lnd" d="M250,290 L350,290 L350,197 L312,197"/>
+  <text class="lb" x="348" y="283" text-anchor="end">T</text>
+  <path class="ln" d="M200,304 L200,324"/>
+  <text class="lb" x="236" y="308" text-anchor="start">F</text>
+
+  <!-- BLOK 4: S_LOAD_TMPL_ADDR -->
+  <rect class="gp" x="82" y="312" width="236" height="48"/>
+  <rect class="st" x="88" y="324" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="322" text-anchor="start">S_LOAD_TMPL_ADDR</text>
+  <text class="op" x="200" y="342" text-anchor="middle">templ_addr_o &lt;= p</text>
+  <path class="ln" d="M200,354 L200,374"/>
+
+  <!-- BLOK 5: S_LOAD_TMPL_DATA -->
+  <rect class="gp" x="82" y="362" width="236" height="90"/>
+  <rect class="st" x="88" y="374" width="224" height="32" rx="0"/>
+  <text class="nm" x="86" y="372" text-anchor="start">S_LOAD_TMPL_DATA</text>
+  <text class="op" x="200" y="393" text-anchor="middle">sum_t &lt;= sum_t + templ_data_i</text>
+  <path class="ln" d="M200,406 L200,418"/>
+  <path class="st" d="M170,418 L230,418 L250,432 L230,446 L170,446 L150,432 z"/>
+  <text class="lb" x="200" y="435" text-anchor="middle">p+1 &lt; N<tspan font-size="7">t</tspan></text>
+  <path class="lnd" d="M250,432 L350,432 L350,339 L312,339"/>
+  <text class="lb" x="348" y="425" text-anchor="end">T</text>
+  <path class="ln" d="M200,446 L200,466"/>
+  <text class="lb" x="236" y="450" text-anchor="start">F</text>
+
+  <!-- BLOK 6: S_CALC_MEAN -->
+  <rect class="gp" x="82" y="454" width="236" height="48"/>
+  <rect class="st" x="88" y="466" width="224" height="30" rx="0"/>
+  <text class="nm" x="86" y="464" text-anchor="start">S_CALC_MEAN</text>
+  <text class="op" x="200" y="479" text-anchor="middle" font-size="7.8">dm_dividend &lt;= sum_t + N/2 ; dm_divisor &lt;= N<tspan x="200" dy="9.8">dm_start &lt;= 1</tspan></text>
+  <path class="ln" d="M200,496 L200,516"/>
+
+  <!-- BLOK 7: S_CALC_MEAN_WAIT -->
+  <rect class="gp" x="82" y="504" width="236" height="124"/>
+  <text class="nm" x="86" y="514" text-anchor="start">S_CALC_MEAN_WAIT</text>
+  <rect class="st" x="88" y="516" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="530" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,538 L200,550"/>
+  <path class="st" d="M170,550 L230,550 L250,564 L230,578 L170,578 L150,564 z"/>
+  <text class="lb" x="200" y="567" text-anchor="middle">dm_done = 1</text>
+  <path class="lnd" d="M250,564 L344,564 L344,510 L206,510"/>
+  <text class="lb" x="342" y="560" text-anchor="end">F</text>
+  <path class="ln" d="M200,578 L200,590"/>
+  <text class="lb" x="236" y="587" text-anchor="start">T</text>
+  <rect class="st" x="88" y="590" width="224" height="32" rx="16"/>
+  <text class="op" x="200" y="609" text-anchor="middle">template_mean &lt;= dm_quot ; v &lt;= 0</text>
+  <path class="ln" d="M200,622 L200,642"/>
+
+  <!-- BLOK 8: S_L_V -->
+  <rect class="gp" x="82" y="630" width="236" height="124"/>
+  <rect class="st" x="88" y="642" width="224" height="28" rx="0"/>
+  <text class="nm" x="86" y="640" text-anchor="start">S_L_V</text>
+  <text class="op" x="200" y="659" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,670 L200,682"/>
+  <path class="st" d="M170,682 L230,682 L250,696 L230,710 L170,710 L150,696 z"/>
+  <text class="lb" x="200" y="699" text-anchor="middle">v &lt; res_h</text>
+  <path class="lnd" d="M250,696 L490,696 L490,1131"/>
+  <text class="lb" x="360" y="691" text-anchor="middle">F (v &ge; res_h)</text>
+  <path class="ln" d="M200,710 L200,722"/>
+  <text class="lb" x="236" y="719" text-anchor="start">T</text>
+  <rect class="st" x="88" y="722" width="224" height="26" rx="13"/>
+  <text class="op" x="200" y="739" text-anchor="middle">u &lt;= 0</text>
+  <path class="ln" d="M200,748 L200,768"/>
+
+  <!-- BLOK 9: S_L_U_A -->
+  <rect class="gp" x="82" y="756" width="236" height="44"/>
+  <rect class="st" x="88" y="768" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="766" text-anchor="start">S_L_U_A</text>
+  <text class="op" x="200" y="784" text-anchor="middle" font-size="7.8">sat_rd_addr &lt;= (v+tmp_h)&middot;SAT_W + (u+tmp_w)</text>
+  <path class="ln" d="M200,794 L200,814"/>
+
+  <!-- BLOK 10: S_L_U_B -->
+  <rect class="gp" x="82" y="802" width="236" height="44"/>
+  <rect class="st" x="88" y="814" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="812" text-anchor="start">S_L_U_B</text>
+  <text class="op" x="200" y="825" text-anchor="middle" font-size="7.4">sum_f_partial &lt;= sat_rd_data<tspan x="200" dy="9.4">sat_rd_addr &lt;= v&middot;SAT_W + (u+tmp_w)</tspan></text>
+  <path class="ln" d="M200,840 L200,860"/>
+
+  <!-- BLOK 11: S_L_U_C -->
+  <rect class="gp" x="82" y="848" width="236" height="44"/>
+  <rect class="st" x="88" y="860" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="858" text-anchor="start">S_L_U_C</text>
+  <text class="op" x="200" y="871" text-anchor="middle" font-size="7.4">sum_f_partial &lt;= sum_f_partial &minus; sat_rd_data<tspan x="200" dy="9.4">sat_rd_addr &lt;= (v+tmp_h)&middot;SAT_W + u</tspan></text>
+  <path class="ln" d="M200,886 L200,906"/>
+
+  <!-- BLOK 12: S_L_U_D -->
+  <rect class="gp" x="82" y="894" width="236" height="44"/>
+  <rect class="st" x="88" y="906" width="224" height="26" rx="0"/>
+  <text class="nm" x="86" y="904" text-anchor="start">S_L_U_D</text>
+  <text class="op" x="200" y="917" text-anchor="middle" font-size="7.4">sum_f_partial &lt;= sum_f_partial &minus; sat_rd_data<tspan x="200" dy="9.4">sat_rd_addr &lt;= v&middot;SAT_W + u</tspan></text>
+  <path class="ln" d="M200,932 L200,952"/>
+
+  <!-- BLOK 13: S_L_U_E -->
+  <rect class="gp" x="82" y="940" width="236" height="54"/>
+  <rect class="st" x="88" y="952" width="224" height="36" rx="0"/>
+  <text class="nm" x="86" y="950" text-anchor="start">S_L_U_E</text>
+  <text class="op" x="200" y="964" text-anchor="middle" font-size="7.4">dm_dividend &lt;= sum_f_partial + sat_rd_data + N/2<tspan x="200" dy="9.4">dm_divisor &lt;= N ; dm_start &lt;= 1</tspan><tspan x="200" dy="9.4">sum_num, sum_den_f, sum_den_t &lt;= 0 ; y, x &lt;= 0</tspan></text>
+  <path class="ln" d="M200,988 L200,1008"/>
+
+  <!-- BLOK 14: S_L_U_WAIT -->
+  <rect class="gp" x="82" y="996" width="236" height="124"/>
+  <text class="nm" x="86" y="1006" text-anchor="start">S_L_U_WAIT</text>
+  <rect class="st" x="88" y="1008" width="224" height="22" rx="0"/>
+  <text class="op" x="200" y="1022" text-anchor="middle">&mdash;</text>
+  <path class="ln" d="M200,1030 L200,1042"/>
+  <path class="st" d="M170,1042 L230,1042 L250,1056 L230,1070 L170,1070 L150,1056 z"/>
+  <text class="lb" x="200" y="1059" text-anchor="middle">dm_done = 1</text>
+  <path class="lnd" d="M250,1056 L344,1056 L344,1002 L206,1002"/>
+  <text class="lb" x="342" y="1052" text-anchor="end">F</text>
+  <path class="ln" d="M200,1070 L200,1082"/>
+  <text class="lb" x="236" y="1079" text-anchor="start">T</text>
+  <rect class="st" x="88" y="1082" width="224" height="32" rx="16"/>
+  <text class="op" x="200" y="1101" text-anchor="middle">f_bar &lt;= dm_quot</text>
+  <path class="ln" d="M200,1114 L200,1131"/>
+
+  <circle cx="200" cy="1140" r="9" class="st"/>
+  <text class="nm" x="200" y="1143" text-anchor="middle">A</text>
+  <circle cx="490" cy="1140" r="9" class="st"/>
+  <text class="nm" x="490" y="1143" text-anchor="middle">B</text>
+  <circle cx="600" cy="30" r="9" class="st"/>
+  <text class="nm" x="600" y="33" text-anchor="middle">C</text>
+  <circle cx="30" cy="781" r="9" class="st"/>
+  <text class="nm" x="30" y="784" text-anchor="middle">D</text>
+  <circle cx="30" cy="656" r="9" class="st"/>
+  <text class="nm" x="30" y="659" text-anchor="middle">E</text>
+  <path class="lnd" d="M591,30 L206,30"/>
+  <path class="lnd" d="M39,781 L88,781"/>
+  <path class="lnd" d="M39,656 L88,656"/>
+</svg>
