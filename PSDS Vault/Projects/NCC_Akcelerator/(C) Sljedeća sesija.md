@@ -1,5 +1,15 @@
 # Sljedeća sesija
 
+## ✅ PROJEKAT KOMPLETAN (potvrđeno 2026-09-11) — svih 10 koraka, 100 bodova
+
+Korak 10 je bio faktički završen još `fb49a75` (2026-08-27: `package_ip.tcl`,
+`build_all.tcl`, `run_sim.tcl` u `src/vhdl/script/novo_pakovanje/`, XSA prisutan
+u `src/vhdl/result/ncc_system/ncc_system_wrapper.xsa`), ali beleške do sad nisu
+bile ažurirane da to zabeleže — status je ovom sesijom usklađen u oba `CLAUDE.md`
+fajla. Nema više blokirajućih stavki; preostale su samo sitnice iz `BUGS.md`/
+`IDEJE.md` (npr. CDMA/interkonekt burst problem, `sat_t` sužavanje) koje nisu
+uslov za bodove.
+
 ## Primjedbe profesorke na predatu dokumentaciju (2026-09-01)
 
 > „Projekat je dobro urađen. Potrebno je ispraviti ASMD, koristite način označavanja

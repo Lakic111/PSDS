@@ -116,8 +116,11 @@ obrazac); `REG_IMG_ADDR`/`REG_TMP_ADDR` su rezervisani.
 
 ## Trenutni status
 
-> **Zadnje ažuriranje:** 2026-08-27
-> **KORACI 1-9 ZAVRŠENI (90 bodova).** Preostaje samo **Korak 10** (10 bodova).
+> **Zadnje ažuriranje:** 2026-09-11
+> **SVIH 10 KORAKA ZAVRŠENO (100 bodova).** Korak 10 (`package_ip.tcl` +
+> ulančavanje do XSA, `build_all.tcl`/`run_sim.tcl`) potvrđen gotov — skripte
+> committovane `fb49a75` (2026-08-27), XSA prisutan
+> (`src/vhdl/result/ncc_system/ncc_system_wrapper.xsa`). Projekat kompletan.
 > Merodavna dokumentacija: `02 Dokumentacija/PSDS_dokumentacija_y25-g10_Korak2-8.pdf`
 > (34 strane) — pokriva Korake 2-8, sa izmerenim post-route brojkama.
 > **KORAK 9 ZAVRŠEN 2026-08-27.** FEN sa ploče je znak po znak identičan zvaničnom:
@@ -316,6 +319,16 @@ Sužavanje bi spustilo BRAM sa 9 na ~6 blokova. Nije urađeno jer 15% nije usko 
         `DCI_MATCH=1`, `CRC_ERROR=0`, `IDCODE_ERROR=0`, `BAD_PACKET_ERROR=0`.
         `MODE_PIN M[2:0]=111` → JTAG boot. **Dizajn, bitstream i ploča su ispravni** —
         svaki kasniji kvar traži se u softveru.
-      - [ ] Task 3: bare-metal aplikacija u Vitisu
-- [ ] Korak 10: TCL skripta za automatizaciju celog Vivado toka [10 bodova]
-      (skeleton u `Vezbe/(C) Vezba 13 - Design Constraining i TCL Scripting.md`)
+      - [x] Task 3: bare-metal aplikacija u Vitisu
+- [x] **Korak 10: TCL skripta za automatizaciju celog Vivado toka [10 bodova]** (ZAVRŠENO,
+      skripte committovane 2026-08-27, `fb49a75`)
+      `package_ip.tcl` (novo) pakuje `ncc_accel` iz izvora bez klika: privremen
+      projekat, VHDL-2008 tip fajla, kapija da RTL mora da elaborira pre
+      pakovanja, `ipx::package_project`, pa **obavezno** poziva
+      `fix_ip_package.tcl` (wizard tiho vraća `vhdlSource` i `ADDR_WIDTH=10`),
+      pa regeneriše `.zip` arhivu. `build_all.tcl` ulančava
+      package IP → BD → sinteza → implementacija → bitstream → XSA → kopiranje
+      u `release/` (parametri `NCC_SKIP_PACKAGE`, `NCC_FCLK`). `run_sim.tcl`
+      pušta svih 8 testbencheva i PADA ako neki javi FAIL. Sve tri u
+      `src/vhdl/script/novo_pakovanje/`. XSA prisutan:
+      `src/vhdl/result/ncc_system/ncc_system_wrapper.xsa`.

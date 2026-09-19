@@ -67,7 +67,7 @@ PSDS Vault/
 ## Moji trenutni projekti i pregledi
 
 ### NCC_Akcelerator — `Projects/NCC_Akcelerator/`
-**Status (2026-08-27): KORACI 1-9 ZAVRŠENI — 90 bodova.** Preostaje samo Korak 10.
+**Status (2026-09-11): SVIH 10 KORAKA ZAVRŠENO — 100 bodova.**
 Šahovski NCC template-matching akcelerator (coarse-to-fine, dva paralelna NCC bloka);
 SystemC/TLM ESL model je referenca, a RTL se piše **ručno u VHDL-u** (`src/vhdl/`),
 ne kroz HLS.
@@ -84,4 +84,5 @@ ne kroz HLS.
 ⚠️ Prenosi u aplikaciji idu **procesorom, ne DMA-om** — burstovi zaglavljuju
 `axi_interconnect_0`. Detalji u `Projects/NCC_Akcelerator/BUGS.md`.
 
-Sledeće: **Korak 10** (`package_ip.tcl` + ulančavanje celog toka do XSA).
+**Korak 10 (`package_ip.tcl` + ulančavanje celog toka do XSA) završen** — projekat je
+kompletan (100/100).
